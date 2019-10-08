@@ -8,18 +8,19 @@ class FHT2D(nn.Module):
     def __init__(self, image_size):
         super(FHT2D, self).__init__()
         M, N = image_size
+        device = torch.device(("cpu","cuda")[torch.cuda.is_available()])
 
         # set up column matrices
         n = torch.arange(N, dtype=torch.float32)
         k = n[:,None]
-        E_real_1 =  torch.cos(2.0 * np.pi * k * n / N)
-        E_imag_1 = -torch.sin(2.0 * np.pi * k * n / N)
+        E_real_1 =  torch.cos(2.0 * np.pi * k * n / N).to(device)
+        E_imag_1 = -torch.sin(2.0 * np.pi * k * n / N).to(device)
 
         # set up row matrices
         m = torch.arange(M, dtype=torch.float32)
         k = m[:,None]
-        E_real_2 =  torch.cos(2.0 * np.pi * k * m / M)
-        E_imag_2 = -torch.sin(2.0 * np.pi * k * m / M)
+        E_real_2 =  torch.cos(2.0 * np.pi * k * m / M).to(device)
+        E_imag_2 = -torch.sin(2.0 * np.pi * k * m / M).to(device)
 
         self.transform_matrices = {"col" : (E_real_1, E_imag_1),
                                    "row" : (E_real_2, E_imag_2)}

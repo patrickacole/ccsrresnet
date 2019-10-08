@@ -97,11 +97,11 @@ if __name__=="__main__":
     print("Beginning training for FreqSR model...")
 
     args = args_parse()
-    dataset = VOC2012(args.data)
+    dataset = VOC2012(args.data, image_shape=(128, 128))
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
 
     device = torch.device(("cpu","cuda")[torch.cuda.is_available()])
-    model = FreqSR().to(device)
+    model = FreqSR(shape=(3, 64, 64)).to(device)
 
     train(model, dataloader)
