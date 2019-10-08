@@ -74,6 +74,7 @@ def train(model, dataloader, scale_factor=2):
                 print("Epoch [{} / {}]: Batch: [{} / {}]: Avg Training Loss: {:0.4f}, Avg Training PSNR: {:0.2f}, Avg Bilinear PSNR: {:0.2f}" \
                       .format(e + 1, args.epochs, i + 1, len(dataloader), train_loss / (i + 1), train_psnr / total_images,
                               bilinear_psnr / total_images))
+                exit()
 
         lrscheduler.step()
 
