@@ -9,7 +9,9 @@ class BatchElemMultiplication(nn.Module):
             raise ValueError("Please make sure that output channels is divisible by the output channels")
         num_tensors = out_channels // nc
         self.weight = nn.Parameter(data=torch.Tensor(1, num_tensors, nc, h, w), requires_grad=True)
-        self.weight.data.uniform_(0, 1)
+        # self.weight.data.uniform_(0, 1)
+        # self.weight.data.fill_(1.0)
+        nn.init.xavier_uniform_(self.weight.data)
 
     def forward(self, x):
         x_ = x.unsqueeze(1)

@@ -74,7 +74,6 @@ def train(model, dataloader, scale_factor=2):
                 print("Epoch [{} / {}]: Batch: [{} / {}]: Avg Training Loss: {:0.4f}, Avg Training PSNR: {:0.2f}, Avg Bilinear PSNR: {:0.2f}" \
                       .format(e + 1, args.epochs, i + 1, len(dataloader), train_loss / (i + 1), train_psnr / total_images,
                               bilinear_psnr / total_images))
-                exit()
 
         lrscheduler.step()
 
@@ -98,11 +97,11 @@ if __name__=="__main__":
     print("Beginning training for FreqSR model...")
 
     args = args_parse()
-    dataset = VOC2012(args.data, image_shape=(128, 128))
+    dataset = VOC2012(args.data, image_shape=(128, 128), grayscale=True)
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
 
     device = torch.device(("cpu","cuda")[torch.cuda.is_available()])
-    model = FreqSR(shape=(3, 64, 64)).to(device)
+    model = FreqSR(shape=(1, 64, 64)).to(device)
 
     train(model, dataloader)
