@@ -60,8 +60,8 @@ class FHT2D(nn.Module):
 
         return X_real, X_imag
 
-    def forward(self, x):
-        return self.fht2d(x, self.transform_matrices)
+    def forward(self, x, forward=True):
+        return self.fht2d(x, self.transform_matrices, forward)
         # X_real, X_imag = self.dft2d(x, self.transform_matrices)
         # X = X_real - X_imag
         # # normalize
@@ -104,24 +104,27 @@ class FastHartleyTransform2D(Function):
         return X_real, X_imag
 
     @staticmethod
-    def forward(ctx, x, transform_matrices=None):
+    def forward(ctx, x, transform_matrices=None, forward=True):
         if len(x.shape) != 4:
             raise ValueError("Input must be 4 Dimensional (batch_size, channels, height, width")
 
         E_real_1, E_imag_1 = transform_matrices["col"]
         E_real_2, E_imag_2 = transform_matrices["row"]
-        ctx.save_for_backward(E_real_1, E_imag_1, E_real_2, E_imag_2)
+        ctx.save_for_backward(E_real_1, E_imag_1, E_real_2, E_imag_2, torch.Tensor(int(forward)))
         X_real, X_imag = FastHartleyTransform2D.dft2d(x, transform_matrices)
         X = X_real - X_imag
 
         # normalize
         # X_reshape = X.reshape(-1, x.size(1), x.size(2) * x.size(3))
         # return X / X_reshape.max(dim=2)[0][:,:,None,None]
-        return X / (X.size(2) * X.size(3))
+        if forward:
+            return X / (X.size(2) * X.size(3))
+        else:
+            return X
 
     @staticmethod
     def backward(ctx, grad_output):
-        E_real_1, E_imag_1, E_real_2, E_imag_2 = ctx.saved_tensors
+        E_real_1, E_imag_1, E_real_2, E_imag_2, forward = ctx.saved_tensors
         transform_matrices = {"col" : (E_real_1, E_imag_1),
                               "row" : (E_real_2, E_imag_2)}
         X_real, X_imag = FastHartleyTransform2D.dft2d(grad_output, transform_matrices)
@@ -130,7 +133,10 @@ class FastHartleyTransform2D(Function):
         # normalize
         # X_reshape = X.reshape(-1, grad_output.size(1), grad_output.size(2) * grad_output.size(3))
         # return X / X_reshape.max(dim=2)[0][:,:,None,None], None
-        return X / (X.size(2) * X.size(3)), None
+        if forward:
+            return X, None
+        else:
+            return X / (X.size(2) * X.size(3)), None
 
 
 if __name__=="__main__":
@@ -146,9 +152,9 @@ if __name__=="__main__":
     m1 = np.transpose(m1, (2, 0, 1))[None,:]
     m = torch.from_numpy(m1)
     print("Orig Spatial\t max: ", m.max(), " min: ", m.min())
-    M = fht2d(m)
+    M = fht2d(m, forward=True)
     print("Fourier\t\t max: ", M.max(), " min: ", M.min())
-    m = fht2d(M)
+    m = fht2d(M, forward=False)
     print("New Spatial\t max: ", m.max(), " min: ", m.min())
     img = np.transpose(np.asarray(m[0]), (1, 2, 0))
     img = (img - img.min()) / (img.max() - img.min())
