@@ -34,6 +34,7 @@ def args_parse():
     return parser.parse_args()
 
 def psnr(learned, real):
+    learned = torch.clamp(learned, min=0, max=1)
     mse = ((learned - real) ** 2).view(real.size(0), -1).mean(dim=-1)
     psnr = 10.0 * torch.log10(1.0 / mse)
     return psnr

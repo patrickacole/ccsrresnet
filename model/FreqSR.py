@@ -22,14 +22,14 @@ class FreqSR(nn.Module):
 
     def forward(self, x):
         x_up = self.upscale(x)
-        x_freq = self.fht2d(x_up, forward=True)
+        x_freq = self.fht2d(x_up)
         x_layer1 = self.block1(x_freq)
         x_layer2 = self.block2(x_layer1)
         x_layer3 = self.block3(x_layer2)
         x_layer4 = self.block4(x_layer3)
         x_layers = torch.cat([x_layer1, x_layer2, x_layer3, x_layer4], dim=1)
         x_proj = self.conv1x1(x_layers)
-        x_spac = self.fht2d(x_proj, forward=False)
+        x_spac = self.fht2d(x_proj)
         return x_up + x_spac
 
 class FreqSRBlock(nn.Module):
