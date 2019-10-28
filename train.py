@@ -55,7 +55,7 @@ def train(model, dataloader, scale_factor=2):
         total_images = 0
         for i, (imageLR, imageHR) in enumerate(dataloader):
             imageLR = Variable(imageLR, requires_grad=True).to(device)
-            imageHR = Variable(imageHR, requires_grad=True).to(device)
+            imageHR = Variable(imageHR).to(device)
 
             optimizer.zero_grad()
             learnedHR = model(imageLR)
@@ -63,7 +63,8 @@ def train(model, dataloader, scale_factor=2):
             loss.backward()
             optimizer.step()
 
-            bilinearHR = upscale(imageLR)
+            # bilinearHR = upscale(imageLR)
+            bilinearHR = imageLR
 
             total_images += imageLR.size(0)
             train_loss += loss.item()
@@ -71,10 +72,17 @@ def train(model, dataloader, scale_factor=2):
             bilinear_psnr += psnr(bilinearHR, imageHR).sum()
             del imageLR, imageHR, learnedHR
 
-            if i % 5 == 0:
+            if (i + 1) % 5 == 0:
                 print("Epoch [{} / {}]: Batch: [{} / {}]: Avg Training Loss: {:0.4f}, Avg Training PSNR: {:0.2f}, Avg Bilinear PSNR: {:0.2f}" \
                       .format(e + 1, args.epochs, i + 1, len(dataloader), train_loss / (i + 1), train_psnr / total_images,
                               bilinear_psnr / total_images))
+                # for name, param in model.named_parameters():
+                #     print(name, param.data.max(), param.data.min(), param.data.mean())
+
+            if (i + 1) == 20:
+                # for name, param in model.named_parameters():
+                #     print(name, param.data.max(), param.data.min())
+                exit()
 
         lrscheduler.step()
 
@@ -103,6 +111,6 @@ if __name__=="__main__":
                             shuffle=True, num_workers=8)
 
     device = torch.device(("cpu","cuda")[torch.cuda.is_available()])
-    model = FreqSR(shape=(1, 64, 64)).to(device)
+    model = FreqSR2(shape=(1, 64, 64)).to(device)
 
     train(model, dataloader)

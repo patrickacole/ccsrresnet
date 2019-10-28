@@ -29,6 +29,7 @@ class VOC2012(Dataset):
             image = image.convert('L')
         imageHR = image.resize(self.image_shape[::-1], resample=Image.LANCZOS)
         imageLR = image.resize(self.image_shape[::-1] // self.scale_factor, resample=Image.LANCZOS)
+        imageLR = imageLR.resize(self.image_shape[::-1], resample=Image.BICUBIC)
 
         return (self.totensor(imageLR), self.totensor(imageHR))
 
