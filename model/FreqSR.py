@@ -8,14 +8,16 @@ class WeightedLayer(nn.Module):
         super(WeightedLayer, self).__init__()
         nc, h, w = shape
 
-        self.weights = nn.Parameter(data=torch.Tensor(1, nc, h, w))
+        self.weights = nn.Parameter(data=torch.Tensor(1, nc, h, w), requires_grad=True)
         # nn.init.xavier_uniform_(self.weights.data)
-        nn.init.uniform_(self.weights.data, -1, 1)
+        # nn.init.uniform_(self.weights.data, -1, 1)
+        nn.init.constant_(self.weights.data, 0.1)
         self.bias = None
         if bias:
-            self.bias = nn.Parameter(data=torch.Tensor(1, nc, h, w))
+            self.bias = nn.Parameter(data=torch.Tensor(1, nc, h, w), requires_grad=True)
             # nn.init.xavier_uniform_(self.bias.data)
-            nn.init.uniform_(self.bias.data, -1, 1)
+            # nn.init.uniform_(self.bias.data, -1, 1)
+            nn.init.constant_(self.bias.data, 0.0)
 
     def forward(self, x):
         x = (self.weights + self.weights.permute(0, 1, 3, 2)) / 2 * x
@@ -49,25 +51,28 @@ class FreqSR(nn.Module):
 
     Paper expects only Y channel from YCbCr, passing in grayscale is okay
     """
-    def __init__(self, shape=(1, 128, 128), nlayers=3):
+    def __init__(self, shape=(1, 128, 128), nlayers=4):
         super(FreqSR, self).__init__()
         nc, h, w = shape
         layers = []
         for i in range(nlayers):
             layers.append(FreqSRBlock(shape))
         self.layers = nn.ModuleList(layers)
-        self.conv1x1 = nn.Conv2d(nlayers, nc, kernel_size=1)
-        self.tanh = nn.Tanh()
+        # self.conv1x1 = nn.Conv2d(nlayers, nc, kernel_size=1)
+        # self.tanh = nn.Tanh()
+        self.weightlayer = WeightedLayer(shape)
 
     def forward(self, x):
-        residual = x
         outputs = []
         for layer in self.layers:
             x = layer(x)
             outputs.append(x)
+        # x = torch.cat(outputs, dim=1)
+        # x = self.conv1x1(x)
         x = torch.cat(outputs, dim=1)
-        x = self.conv1x1(x)
-        return self.tanh(x + residual)
+        x = torch.sum(x, dim=1).unsqueeze(1)
+        x = self.weightlayer(x)
+        return x
 
 
 if __name__=="__main__":
@@ -75,5 +80,7 @@ if __name__=="__main__":
     x = torch.zeros((4, 1, 256, 256))
     y = model(x)
     print(y.shape)
-    for name, param in model.named_parameters():
-        print(name)
+    # for name, param in model.named_parameters():
+    #     print(name)
+    import torchsummary
+    torchsummary.summary(model, (1, 256, 256))

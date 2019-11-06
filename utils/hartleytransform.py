@@ -4,6 +4,15 @@ import numpy as np
 def cas(z):
     return torch.cos(z) + torch.sin(z)
 
+def freqshift(x):
+    """
+    Assumes x is 4D - (N, 3, H, W)
+    """
+    shift = [d // 2 for d in x.shape[-2:]]
+    x = torch.cat((x[:,:,shift[0]:], x[:,:,:shift[0]]), dim=-2)
+    x = torch.cat((x[:,:,:,shift[1]:], x[:,:,:,:shift[1]]), dim=-1)
+    return x
+
 class FHT2D():
     def __init__(self, image_size):
         M, N = image_size
@@ -22,11 +31,16 @@ class FHT2D():
         self.M = M
         self.N = N
 
-    def __call__(self, x, inverse=False):
+    def __call__(self, x, inverse=False, shift=True):
+        if inverse and shift:
+            x = freqshift(x)
+
         H = torch.matmul(torch.matmul(x, self.E_col).permute(0, 1, 3, 2),
                          self.E_row.t()).permute(0, 1, 3, 2)
         if not inverse:
             H = H / (self.M * self.N)
+            if shift:
+                H = freqshift(H)
         return H
 
 
@@ -43,8 +57,9 @@ if __name__=="__main__":
     m1 = np.transpose(m1_, (2, 0, 1))[None,:]
     m = torch.from_numpy(m1)
     print(m.shape)
-    M = fht2d(m)
-    img = np.transpose(np.asarray(m[0]), (1, 2, 0))
+    M = fht2d(m, shift=True)
+    m_ = fht2d(M, inverse=True, shift=True)
+    img = np.transpose(np.asarray(m_[0]), (1, 2, 0))
     def psnr(img1, img2):
         img1 = np.clip(img1, 0, 1)
         img2 = np.clip(img2, 0, 1)

@@ -60,10 +60,17 @@ def weightedEuclideanLoss(learned, real, a=1.0, b=1.0):
     # return the mean over the given samples
     return torch.mean(l)
 
+def L2Loss(learned, real):
+    c = learned.size(1)
+    diff = learned - real
+    diff = diff.view(-1, c * M * N)
+    norm = torch.norm(diff, p=2, dim=1)
+    return torch.mean(norm)
+
 def train(model, dataloader, scale_factor=2):
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
-    criterion = weightedEuclideanLoss
+    criterion = L2Loss #weightedEuclideanLoss
     lrscheduler = optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.5)
     fht2d = FHT2D((M,N))
 
@@ -77,12 +84,15 @@ def train(model, dataloader, scale_factor=2):
             imageLR = imageLR.to(device)
             imageHR = imageHR.to(device)
 
-            freqLR = Variable(fht2d(imageLR), requires_grad=True)
-            freqHR = Variable(fht2d(imageHR))
+            # calculate residual
+            imageResidual = imageHR - imageLR
+
+            freqLR = Variable(fht2d(imageLR))
+            freqResidual = Variable(fht2d(imageResidual))
 
             optimizer.zero_grad()
-            learnedHR = model(freqLR)
-            loss = criterion(learnedHR, freqHR)
+            learnedResidual = model(freqLR)
+            loss = criterion(learnedResidual, freqResidual)
             loss.backward()
 
             # clip gradient
@@ -96,7 +106,7 @@ def train(model, dataloader, scale_factor=2):
 
             optimizer.step()
 
-            learnedHR = fht2d(learnedHR, inverse=True)
+            learnedHR = fht2d(learnedResidual, inverse=True) + imageLR
             bicubicHR = imageLR
 
             total_images += imageLR.size(0)
