@@ -18,7 +18,7 @@ from utils.hartleytransform import *
 from model.FreqSR import *
 
 # global variables
-M, N = (256, 256)
+M, N = (64, 64)
 device = None
 args = None
 
@@ -29,9 +29,9 @@ def args_parse():
     """
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('--data', default="dataset/VOC2012/JPEGImages/", help="Path to where data is stored")
-    parser.add_argument('--lr', default=1e-2, type=float, help="Learning rate")
+    parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=200, type=int, help="Number of epochs to train")
-    parser.add_argument('--batch', default=128, type=int, help="Batch size to use while training")
+    parser.add_argument('--batch', default=64, type=int, help="Batch size to use while training")
     parser.add_argument('--checkpointdir', default="checkpoints/", help="Path to checkpoint directory")
     return parser.parse_args()
 
@@ -49,7 +49,7 @@ def weightedEuclideanLoss(learned, real, a=1.0, b=1.0):
     # this matrix puts an emphasis on the corners of the image
     m = (torch.abs(M / 2 - torch.arange(M)[None,:]) / (M / 2)) ** 2
     n = (torch.abs(N / 2 - torch.arange(N)[:,None]) / (N / 2)) ** 2
-    w = torch.exp(a * m + b * n)
+    w = torch.exp(a * m + b * n).to(device)
 
     # take the 2 norm of the flattened image
     # this is equivalent to taking the frobenius norm of the image matrix
@@ -84,6 +84,16 @@ def train(model, dataloader, scale_factor=2):
             learnedHR = model(freqLR)
             loss = criterion(learnedHR, freqHR)
             loss.backward()
+
+            # clip gradient
+            lr = args.lr
+            for param_group in optimizer.param_groups:
+                lr = param_group['lr']
+                break
+
+            clip_value = 1e3 / lr
+            nn.utils.clip_grad_value_(model.parameters(), clip_value)
+
             optimizer.step()
 
             learnedHR = fht2d(learnedHR, inverse=True)
@@ -93,19 +103,18 @@ def train(model, dataloader, scale_factor=2):
             train_loss += loss.item()
             train_psnr += psnr(learnedHR, imageHR).sum()
             bicubic_psnr += psnr(bicubicHR, imageHR).sum()
-            del imageLR, imageHR, learnedHR
+            del imageLR, imageHR, learnedHR, freqLR, freqHR, bicubicHR
 
-            if (i + 1) % 5 == 0:
+            if (i + 1) % 25 == 0:
                 print("Epoch [{} / {}]: Batch: [{} / {}]: Avg Training Loss: {:0.4f}, Avg Training PSNR: {:0.2f}, Avg Bicubic PSNR: {:0.2f}" \
                       .format(e + 1, args.epochs, i + 1, len(dataloader), train_loss / (i + 1), train_psnr / total_images,
                               bicubic_psnr / total_images))
                 # for name, param in model.named_parameters():
                 #     print(name, param.data.max(), param.data.min(), param.data.mean())
 
-            if (i + 1) == 20:
+            # if (i + 1) == 20:
                 # for name, param in model.named_parameters():
                 #     print(name, param.data.max(), param.data.min())
-                break
 
         lrscheduler.step()
 
@@ -123,18 +132,32 @@ def train(model, dataloader, scale_factor=2):
                           'optim_dict' : optimizer.state_dict()}
         save_checkpoint(training_state, isbest=isbest,
                         checkpoint=args.checkpointdir)
-        break
 
 
 if __name__=="__main__":
     print("Beginning training for FreqSR model...")
-
     args = args_parse()
+
+    print("Using the following hyperparemters:")
+    print("Data:                 " + args.data)
+    print("Image size:           " + str(M) + " x " + str(N))
+    print("Learning rate:        " + str(args.lr))
+    print("Number of Epochs:     " + str(args.epochs))
+    print("Batch size:           " + str(args.batch))
+    print("Checkpoint directory: " + args.checkpointdir)
+    print("Cuda:                 " + str(torch.cuda.device_count()))
+    print("")
+
     dataset = VOC2012(args.data, image_shape=(M, N), grayscale=True)
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
 
-    device = torch.device(("cpu","cuda")[torch.cuda.is_available()])
-    model = FreqSR(shape=(1, M, N)).to(device)
+    device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
+    model = FreqSR(shape=(1, M, N))
+    if (torch.cuda.device_count() > 1):
+        device_ids = list(range(torch.cuda.device_count()))
+        print("GPU devices being used: ", device_ids)
+        model = nn.DataParallel(model, device_ids=device_ids)
+    model.to(device)
 
     train(model, dataloader)
