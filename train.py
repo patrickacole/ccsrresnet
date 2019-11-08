@@ -18,7 +18,7 @@ from utils.hartleytransform import *
 from model.FreqSR import *
 
 # global variables
-M, N = (64, 64)
+M, N = (100, 100)
 device = None
 args = None
 
@@ -31,7 +31,7 @@ def args_parse():
     parser.add_argument('--data', default="dataset/VOC2012/JPEGImages/", help="Path to where data is stored")
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=200, type=int, help="Number of epochs to train")
-    parser.add_argument('--batch', default=64, type=int, help="Batch size to use while training")
+    parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
     parser.add_argument('--checkpointdir', default="checkpoints/", help="Path to checkpoint directory")
     return parser.parse_args()
 
@@ -69,8 +69,9 @@ def L2Loss(learned, real):
 
 def train(model, dataloader, scale_factor=2):
     model.train()
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
-    criterion = L2Loss #weightedEuclideanLoss
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999))
+    criterion = weightedEuclideanLoss
     lrscheduler = optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.5)
     fht2d = FHT2D((M,N))
 
@@ -113,7 +114,9 @@ def train(model, dataloader, scale_factor=2):
             train_loss += loss.item()
             train_psnr += psnr(learnedHR, imageHR).sum()
             bicubic_psnr += psnr(bicubicHR, imageHR).sum()
-            del imageLR, imageHR, learnedHR, freqLR, freqHR, bicubicHR
+
+            if (i + 1) % 100 == 0:
+                print("Norm residual learned: {}".format(torch.norm(learnedResidual.view(-1, 1 * M * N), dim=1).mean()))
 
             if (i + 1) % 25 == 0:
                 print("Epoch [{} / {}]: Batch: [{} / {}]: Avg Training Loss: {:0.4f}, Avg Training PSNR: {:0.2f}, Avg Bicubic PSNR: {:0.2f}" \
