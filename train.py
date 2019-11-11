@@ -18,7 +18,7 @@ from utils.hartleytransform import *
 from model.FreqSR import *
 
 # global variables
-M, N = (100, 100)
+M, N = (360, 480)
 device = None
 args = None
 
@@ -47,8 +47,8 @@ def weightedEuclideanLoss(learned, real, a=1.0, b=1.0):
 
     # construct weighted matrix
     # this matrix puts an emphasis on the corners of the image
-    m = (torch.abs(M / 2 - torch.arange(M)[None,:]) / (M / 2)) ** 2
-    n = (torch.abs(N / 2 - torch.arange(N)[:,None]) / (N / 2)) ** 2
+    m = (torch.abs(M / 2 - torch.arange(M)[:,None]) / (M / 2)) ** 2
+    n = (torch.abs(N / 2 - torch.arange(N)[None,:]) / (N / 2)) ** 2
     w = torch.exp(a * m + b * n).to(device)
 
     # take the 2 norm of the flattened image

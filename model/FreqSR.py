@@ -8,23 +8,60 @@ class WeightedLayer(nn.Module):
         super(WeightedLayer, self).__init__()
         nc, h, w = shape
 
-        self.weights = nn.Parameter(data=torch.Tensor(1, nc, h, w), requires_grad=True)
-        # nn.init.xavier_uniform_(self.weights.data)
-        # nn.init.uniform_(self.weights.data, -1, 1)
+        self.nc = nc
+        self.h = h // 2
+        self.w = w // 2
+        self.weights = nn.Parameter(data=torch.Tensor(1, nc, self.h, self.w), requires_grad=True)
         nn.init.constant_(self.weights.data, 0.1)
         self.bias = None
         if bias:
-            self.bias = nn.Parameter(data=torch.Tensor(1, nc, h, w), requires_grad=True)
-            # nn.init.xavier_uniform_(self.bias.data)
-            # nn.init.uniform_(self.bias.data, -1, 1)
+            self.bias = nn.Parameter(data=torch.Tensor(1, nc, self.h, self.w), requires_grad=True)
             nn.init.constant_(self.bias.data, 0.0)
 
+    def _mult(self, x, weights):
+        # [W_2 W_1]
+        # [W_3 W_4]
+        # W_1 = fliplr(W_2) = fliplr(flipud(W_3)) = flipud(W_4)
+        W = torch.zeros(1, self.nc, 2 * self.h, 2 * self.w)
+        W[:,:,:self.h,self.w:] = weights
+        W[:,:,:self.h,:self.w] = torch.flip(weights, [3])
+        W[:,:,self.h:,self.w:] = torch.flip(weights, [2])
+        W[:,:,self.h:,:self.w] = torch.flip(weights, [2,3])
+        x = W * x
+        # multiply the top right corner
+        # x[:,:,:self.h,self.w:] = weights * x[:,:,:self.h,self.w:]
+        # # multiply the top left corner
+        # x[:,:,:self.h,:self.w] = torch.flip(weights, [3]) * x[:,:,:self.h,:self.w]
+        # # mutiply the bottom right corner
+        # x[:,:,self.h:,self.w:] = torch.flip(weights, [2]) * x[:,:,self.h:,self.w:]
+        # # mutiply the bottom left corner
+        # x[:,:,self.h:,:self.w] = torch.flip(weights, [2,3]) * x[:,:,self.h:,:self.w]
+        return x
+
+    def _add(self, x, weights):
+        # [W_2 W_1]
+        # [W_3 W_4]
+        # W_1 = fliplr(W_2) = fliplr(flipud(W_3)) = flipud(W_4)
+        W = torch.zeros(1, self.nc, 2 * self.h, 2 * self.w)
+        W[:,:,:self.h,self.w:] = weights
+        W[:,:,:self.h,:self.w] = torch.flip(weights, [3])
+        W[:,:,self.h:,self.w:] = torch.flip(weights, [2])
+        W[:,:,self.h:,:self.w] = torch.flip(weights, [2,3])
+        x = W + x
+        # multiply the top right corner
+        # x[:,:,:self.h,self.w:] = weights + x[:,:,:self.h,self.w:]
+        # # multiply the top left corner
+        # x[:,:,:self.h,:self.w] = torch.flip(weights, [3]) + x[:,:,:self.h,:self.w]
+        # # mutiply the bottom right corner
+        # x[:,:,self.h:,self.w:] = torch.flip(weights, [2]) + x[:,:,self.h:,self.w:]
+        # # mutiply the bottom left corner
+        # x[:,:,self.h:,:self.w] = torch.flip(weights, [2,3]) + x[:,:,self.h:,:self.w]
+        return x
+
     def forward(self, x):
-        x = (self.weights + self.weights.permute(0, 1, 3, 2)) / 2 * x
-        # x = self.weights * x
+        x = self._mult(x, self.weights)
         if self.bias is not None:
-            x = x + (self.bias + self.bias.permute(0, 1, 3, 2)) / 2
-            # x = x + self.bias
+            x = self._add(x, self.bias)
         return x
 
 class FreqSRBlock(nn.Module):
@@ -78,11 +115,11 @@ class FreqSR(nn.Module):
 
 
 if __name__=="__main__":
-    model = FreqSR((1, 256, 256))
-    x = torch.zeros((4, 1, 256, 256))
+    model = FreqSR((1, 180, 240))
+    x = torch.zeros((4, 1, 180, 240))
     y = model(x)
     print(y.shape)
     # for name, param in model.named_parameters():
     #     print(name)
     import torchsummary
-    torchsummary.summary(model, (1, 256, 256))
+    torchsummary.summary(model, (1, 180, 240))
