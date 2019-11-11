@@ -72,7 +72,7 @@ def train(model, dataloader, scale_factor=2):
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999))
     criterion = weightedEuclideanLoss
-    lrscheduler = optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.5)
+    lrscheduler = optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.2)
     fht2d = FHT2D((M,N))
 
     best_psnr = 0
@@ -102,7 +102,7 @@ def train(model, dataloader, scale_factor=2):
                 lr = param_group['lr']
                 break
 
-            clip_value = 1e3 / lr
+            clip_value = 1e4 / lr # increased from 1e3
             nn.utils.clip_grad_value_(model.parameters(), clip_value)
 
             optimizer.step()
