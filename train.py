@@ -18,7 +18,7 @@ from utils.hartleytransform import *
 from model.FreqSR import *
 
 # global variables
-M, N = (360, 480)
+M, N = (180, 240)
 device = None
 args = None
 
@@ -111,9 +111,9 @@ def train(model, dataloader, scale_factor=2):
             bicubicHR = imageLR
 
             total_images += imageLR.size(0)
-            train_loss += loss.item()
-            train_psnr += psnr(learnedHR, imageHR).sum()
-            bicubic_psnr += psnr(bicubicHR, imageHR).sum()
+            train_loss += loss.detach().item()
+            train_psnr += psnr(learnedHR, imageHR).sum().item()
+            bicubic_psnr += psnr(bicubicHR, imageHR).sum().item()
 
             if (i + 1) % 100 == 0:
                 print("Norm residual learned: {}".format(torch.norm(learnedResidual.view(-1, 1 * M * N), dim=1).mean()))
@@ -128,6 +128,8 @@ def train(model, dataloader, scale_factor=2):
             # if (i + 1) == 20:
                 # for name, param in model.named_parameters():
                 #     print(name, param.data.max(), param.data.min())
+
+            del loss, imageLR, imageHR, imageResidual, freqLR, freqResidual, learnedResidual, learnedHR
 
         lrscheduler.step()
 

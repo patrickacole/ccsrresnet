@@ -22,7 +22,7 @@ class WeightedLayer(nn.Module):
         # [W_2 W_1]
         # [W_3 W_4]
         # W_1 = fliplr(W_2) = fliplr(flipud(W_3)) = flipud(W_4)
-        W = torch.zeros(1, self.nc, 2 * self.h, 2 * self.w)
+        W = torch.zeros(1, self.nc, 2 * self.h, 2 * self.w).to(x.device)
         W[:,:,:self.h,self.w:] = weights
         W[:,:,:self.h,:self.w] = torch.flip(weights, [3])
         W[:,:,self.h:,self.w:] = torch.flip(weights, [2])
@@ -42,7 +42,7 @@ class WeightedLayer(nn.Module):
         # [W_2 W_1]
         # [W_3 W_4]
         # W_1 = fliplr(W_2) = fliplr(flipud(W_3)) = flipud(W_4)
-        W = torch.zeros(1, self.nc, 2 * self.h, 2 * self.w)
+        W = torch.zeros(1, self.nc, 2 * self.h, 2 * self.w).to(x.device)
         W[:,:,:self.h,self.w:] = weights
         W[:,:,:self.h,:self.w] = torch.flip(weights, [3])
         W[:,:,self.h:,self.w:] = torch.flip(weights, [2])
@@ -65,7 +65,7 @@ class WeightedLayer(nn.Module):
         return x
 
 class FreqSRBlock(nn.Module):
-    def __init__(self, shape, oc=16, kernel_size=3, padding=1):
+    def __init__(self, shape, oc=16, kernel_size=7, padding=3):
         super(FreqSRBlock, self).__init__()
         nc, h, w = shape
 
