@@ -1,2 +1,7 @@
 *__pycache__
 *VOC2012*
+*.DS_Store
+*.stdout
+*.stderr
+*.log
+
