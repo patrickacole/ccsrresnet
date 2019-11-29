@@ -14,14 +14,14 @@ def save_checkpoint(state, isbest, checkpoint):
     @param isbest   : True if it is the best model seen till now (bool)
     @param checkpoint: folder where parameters are to be saved (string)
     """
-    filepath = os.path.join(checkpoint, 'last.pth.tar')
+    filepath = os.path.join(checkpoint, 'last.pth')
     if not os.path.exists(checkpoint):
         print("Checkpoint Directory does not exist! Making directory {}".format(checkpoint))
         os.mkdir(checkpoint)
 
     torch.save(state, filepath)
     if isbest:
-        shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth.tar'))
+        shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth'))
 
 
 def load_checkpoint(checkpointdir, prefix, model, optimizer=None):
@@ -33,7 +33,7 @@ def load_checkpoint(checkpointdir, prefix, model, optimizer=None):
     @param model        : model for which the parameters are loaded (DeepConvNet)
     @param optimizer    : resume optimizer from checkpoint (optim)
     """
-    checkpoint = os.path.join(checkpointdir, prefix + '.pth.tar')
+    checkpoint = os.path.join(checkpointdir, prefix + '.pth')
     if not os.path.exists(checkpoint):
         raise IOError("File doesn't exist {}".format(checkpoint))
 

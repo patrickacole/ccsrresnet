@@ -18,7 +18,7 @@ from utils.hartleytransform import *
 from model.FreqSR import *
 
 # global variables
-M, N = (180, 240)
+M, N = (256, 256)
 device = None
 args = None
 
