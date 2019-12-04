@@ -65,7 +65,7 @@ class WeightedLayer(nn.Module):
         return x
 
 class FreqSRBlock(nn.Module):
-    def __init__(self, shape, oc=16, kernel_size=7, padding=3):
+    def __init__(self, shape, oc=32, kernel_size=7, padding=3):
         super(FreqSRBlock, self).__init__()
         nc, h, w = shape
 
