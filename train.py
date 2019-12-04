@@ -29,6 +29,7 @@ def args_parse():
     """
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('--data', default="dataset/VOC2012/JPEGImages/", help="Path to where data is stored")
+    parser.add_argument('--rgb', default=False, action="store_true", help="Whether to train the model with rgb (default is grayscale)")
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=200, type=int, help="Number of epochs to train")
     parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
@@ -122,12 +123,6 @@ def train(model, dataloader, scale_factor=2):
                 print("Epoch [{} / {}]: Batch: [{} / {}]: Avg Training Loss: {:0.4f}, Avg Training PSNR: {:0.2f}, Avg Bicubic PSNR: {:0.2f}" \
                       .format(e + 1, args.epochs, i + 1, len(dataloader), train_loss / (i + 1), train_psnr / total_images,
                               bicubic_psnr / total_images))
-                # for name, param in model.named_parameters():
-                #     print(name, param.data.max(), param.data.min(), param.data.mean())
-
-            # if (i + 1) == 20:
-                # for name, param in model.named_parameters():
-                #     print(name, param.data.max(), param.data.min())
 
             del loss, imageLR, imageHR, imageResidual, freqLR, freqResidual, learnedResidual, learnedHR
 
@@ -156,6 +151,7 @@ if __name__=="__main__":
     print("Using the following hyperparemters:")
     print("Data:                 " + args.data)
     print("Image size:           " + str(M) + " x " + str(N))
+    print("RGB:                  " + str(args.rgb))
     print("Learning rate:        " + str(args.lr))
     print("Number of Epochs:     " + str(args.epochs))
     print("Batch size:           " + str(args.batch))
@@ -163,12 +159,14 @@ if __name__=="__main__":
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
 
-    dataset = VOC2012(args.data, image_shape=(M, N), grayscale=True)
+    dataset = VOC2012(args.data, image_shape=(M, N), grayscale=not args.rgb)
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
 
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
-    model = FreqSR(shape=(1, M, N))
+
+    C = (1, 3)[int(args.rgb)]
+    model = FreqSR(shape=(C, M, N))
     if (torch.cuda.device_count() > 1):
         device_ids = list(range(torch.cuda.device_count()))
         print("GPU devices being used: ", device_ids)
