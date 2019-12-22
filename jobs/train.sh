@@ -36,5 +36,5 @@ ln -s /data/pacole2/VOCdevkit/VOC2012 VOC2012
 # Data is ready now run python file
 cd ~/Projects/freq-sr/
 echo "Running python script now"
-python train.py
+python train.py --rgb
 
