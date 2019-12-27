@@ -16,6 +16,7 @@ from utils.dataset import *
 from utils.checkpoints import *
 from utils.hartleytransform import *
 from model.FreqSR import *
+from model.FSRCNN import *
 
 # global variables
 M, N = (256, 256)
@@ -29,11 +30,10 @@ def args_parse():
     """
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('--data', default="dataset/VOC2012/JPEGImages/", help="Path to where data is stored")
-    parser.add_argument('--rgb', default=False, action="store_true", help="Whether to train the model with rgb (default is grayscale)")
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=200, type=int, help="Number of epochs to train")
     parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
-    parser.add_argument('--checkpointdir', default="checkpoints/", help="Path to checkpoint directory")
+    parser.add_argument('--checkpointdir', default="checkpoints/fsrcnn_backend/", help="Path to checkpoint directory")
     return parser.parse_args()
 
 def psnr(learned, real):
@@ -68,7 +68,7 @@ def L2Loss(learned, real):
     norm = torch.norm(diff, p=2, dim=1)
     return torch.mean(norm)
 
-def train(model, dataloader, scale_factor=2):
+def train(model, fsrcnn, dataloader, scale_factor=2):
     model.train()
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999))
@@ -80,11 +80,14 @@ def train(model, dataloader, scale_factor=2):
     for e in range(args.epochs):
         train_loss = 0.0
         train_psnr = 0.0
-        bicubic_psnr = 0.0
+        fsrcnn_psnr = 0.0
         total_images = 0
         for i, (imageLR, imageHR) in enumerate(dataloader):
             imageLR = imageLR.to(device)
             imageHR = imageHR.to(device)
+
+            with torch.no_grad():
+                imageLR = fsrcnn(imageLR)
 
             # calculate residual
             imageResidual = imageHR - imageLR
@@ -109,28 +112,28 @@ def train(model, dataloader, scale_factor=2):
             optimizer.step()
 
             learnedHR = fht2d(learnedResidual, inverse=True) + imageLR
-            bicubicHR = imageLR
+            fsrcnnHR = imageLR
 
             total_images += imageLR.size(0)
             train_loss += loss.detach().item()
             train_psnr += psnr(learnedHR, imageHR).sum().item()
-            bicubic_psnr += psnr(bicubicHR, imageHR).sum().item()
+            fsrcnn_psnr += psnr(fsrcnnHR, imageHR).sum().item()
 
             if (i + 1) % 100 == 0:
                 print("Norm residual learned: {}".format(torch.norm(learnedResidual.view(-1, 1 * M * N), dim=1).mean()))
 
             if (i + 1) % 25 == 0:
-                print("Epoch [{} / {}]: Batch: [{} / {}]: Avg Training Loss: {:0.4f}, Avg Training PSNR: {:0.2f}, Avg Bicubic PSNR: {:0.2f}" \
+                print("Epoch [{} / {}]: Batch: [{} / {}]: Avg Training Loss: {:0.4f}, Avg Training PSNR: {:0.2f}, Avg fsrcnn PSNR: {:0.2f}" \
                       .format(e + 1, args.epochs, i + 1, len(dataloader), train_loss / (i + 1), train_psnr / total_images,
-                              bicubic_psnr / total_images))
+                              fsrcnn_psnr / total_images))
 
             del loss, imageLR, imageHR, imageResidual, freqLR, freqResidual, learnedResidual, learnedHR
 
         lrscheduler.step()
 
-        print("Epoch [{} / {}]: Final Avg Training Loss: {:0.4f}, Final Avg Training PSNR: {:0.2f}, Final Avg Bicubic PSNR: {:0.2f}" \
+        print("Epoch [{} / {}]: Final Avg Training Loss: {:0.4f}, Final Avg Training PSNR: {:0.2f}, Final Avg fsrcnn PSNR: {:0.2f}" \
                       .format(e + 1, args.epochs, train_loss / len(dataloader), train_psnr / total_images,
-                              bicubic_psnr / total_images))
+                              fsrcnn_psnr / total_images))
 
         avg_train_psnr = train_psnr / len(dataloader)
         isbest = avg_train_psnr > best_psnr
@@ -145,13 +148,12 @@ def train(model, dataloader, scale_factor=2):
 
 
 if __name__=="__main__":
-    print("Beginning training for FreqSR model...")
+    print("Beginning training for FreqSR model with FSRCNN...")
     args = args_parse()
 
     print("Using the following hyperparemters:")
     print("Data:                 " + args.data)
     print("Image size:           " + str(M) + " x " + str(N))
-    print("RGB:                  " + str(args.rgb))
     print("Learning rate:        " + str(args.lr))
     print("Number of Epochs:     " + str(args.epochs))
     print("Batch size:           " + str(args.batch))
@@ -159,19 +161,25 @@ if __name__=="__main__":
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
 
-    color = ('grayscale', 'rgb')[int(args.rgb)]
-    dataset = VOC2012(args.data, image_shape=(M, N), color=color, upsample='bicubic')
+    dataset = VOC2012(args.data, image_shape=(M, N), color='ycbcr', upsample='fsrcnn')
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
 
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
 
-    C = (1, 3)[int(args.rgb)]
-    model = FreqSR(shape=(C, M, N))
+    model = FreqSR(shape=(1, M, N))
     if (torch.cuda.device_count() > 1):
         device_ids = list(range(torch.cuda.device_count()))
         print("GPU devices being used: ", device_ids)
         model = nn.DataParallel(model, device_ids=device_ids)
     model.to(device)
 
-    train(model, dataloader)
+    # load fsrcnn model to do upsampling
+    fsrcnn = FSRCNN(scale_factor=2)
+    fsrcnn_checkpoint = torch.load(f'checkpoints/fsrcnn/fsrcnn_x2.pth', map_location='cpu')
+    fsrcnn.load_state_dict(fsrcnn_checkpoint)
+    fsrcnn.eval()
+    for param in fsrcnn.parameters():
+        param.requires_grad_ = False
+
+    train(model, fsrcnn, dataloader)
