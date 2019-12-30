@@ -178,6 +178,7 @@ if __name__=="__main__":
     fsrcnn = FSRCNN(scale_factor=2)
     fsrcnn_checkpoint = torch.load(f'checkpoints/fsrcnn/fsrcnn_x2.pth', map_location='cpu')
     fsrcnn.load_state_dict(fsrcnn_checkpoint)
+    fsrcnn.to(device)
     fsrcnn.eval()
     for param in fsrcnn.parameters():
         param.requires_grad_ = False
