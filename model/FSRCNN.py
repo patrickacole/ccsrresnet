@@ -1,7 +1,7 @@
 import math
 from torch import nn
 
-
+# Taken from: https://github.com/yjn870/FSRCNN-pytorch
 class FSRCNN(nn.Module):
     def __init__(self, scale_factor, num_channels=1, d=56, s=12, m=4):
         super(FSRCNN, self).__init__()

@@ -4,6 +4,6 @@
 *.stdout
 *.stderr
 *.log
-*Set5*
-*Set14*
+dataset/Set5
+dataset/Set14
 
