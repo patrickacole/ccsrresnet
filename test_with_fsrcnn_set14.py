@@ -51,10 +51,10 @@ for path in image_paths:
     hr = Image.open(os.path.join(data_path, path)).convert('RGB')
     if (hr.size != (N, M)):
         hr = hr.resize((N, M), resample=Image.LANCZOS)
-    lr = hr.resize((N // 2, M // 2), resample=Image.LANCZOS)
-    bicubic_hr = lr.resize((N, M), resample=Image.BICUBIC)
+    lr = hr.resize((hr.size[0] // 2, hr.size[1] // 2), resample=Image.LANCZOS)
+    bicubic_hr = lr.resize((hr.size[0], hr.size[1]), resample=Image.BICUBIC)
 
-    fht2d = FHT2D((M,N))
+    fht2d = FHT2D((hr.size[1], hr.size[0]))
 
     lr_y, _ = preprocess(lr, device)
     bicubic_y, _ = preprocess(bicubic_hr, device)
@@ -82,7 +82,6 @@ for path in image_paths:
     max_f_psnr = max(max_f_psnr, fsrcnn_psnr)
     max_l_psnr = max(max_l_psnr, learned_psnr)
 
-    print(path)
     print(f"{path.split('_SRF')[0]} Bicubic PSNR:", bicubic_psnr)
     print(f"{path.split('_SRF')[0]} FSRCNN PSNR :", fsrcnn_psnr)
     print(f"{path.split('_SRF')[0]} Learned PSNR:", learned_psnr)
