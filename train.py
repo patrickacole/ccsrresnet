@@ -15,7 +15,8 @@ from torch.utils.data import DataLoader
 from utils.dataset import *
 from utils.checkpoints import *
 from utils.hartleytransform import *
-from model.FreqSR import *
+# from model.FreqSR import *
+from model.FreqSR2 import *
 
 # global variables
 M, N = (256, 256)
@@ -167,7 +168,8 @@ if __name__=="__main__":
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
 
     C = (1, 3)[int(args.rgb)]
-    model = FreqSR(shape=(C, M, N))
+    # model = FreqSR(shape=(C, M, N))
+    model = FreqSR2(nc=C, expand=64, nlayers=3)
     if (torch.cuda.device_count() > 1):
         device_ids = list(range(torch.cuda.device_count()))
         print("GPU devices being used: ", device_ids)
