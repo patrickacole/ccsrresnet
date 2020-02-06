@@ -34,7 +34,7 @@ def args_parse():
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=200, type=int, help="Number of epochs to train")
     parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
-    parser.add_argument('--checkpointdir', default="checkpoints/", help="Path to checkpoint directory")
+    parser.add_argument('--checkpointdir', default="checkpoints/bicubic_backend-2/", help="Path to checkpoint directory")
     return parser.parse_args()
 
 def psnr(learned, real):
