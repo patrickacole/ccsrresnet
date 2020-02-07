@@ -15,8 +15,7 @@ from torch.utils.data import DataLoader
 from utils.dataset import *
 from utils.checkpoints import *
 from utils.hartleytransform import *
-# from model.FreqSR import *
-from model.FreqSR2 import *
+from model.FreqSR import *
 
 # global variables
 M, N = (256, 256)
@@ -34,7 +33,7 @@ def args_parse():
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=200, type=int, help="Number of epochs to train")
     parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
-    parser.add_argument('--checkpointdir', default="checkpoints/bicubic_backend-2/", help="Path to checkpoint directory")
+    parser.add_argument('--checkpointdir', default="checkpoints/bicubic_backend", help="Path to checkpoint directory")
     return parser.parse_args()
 
 def psnr(learned, real):
@@ -168,8 +167,7 @@ if __name__=="__main__":
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
 
     C = (1, 3)[int(args.rgb)]
-    # model = FreqSR(shape=(C, M, N))
-    model = FreqSR2(nc=C, expand=64, nlayers=3)
+    model = FreqSR(shape=(C, M, N))
     if (torch.cuda.device_count() > 1):
         device_ids = list(range(torch.cuda.device_count()))
         print("GPU devices being used: ", device_ids)
