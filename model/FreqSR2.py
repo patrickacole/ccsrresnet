@@ -78,10 +78,11 @@ class FreqSRBlock(nn.Module):
 
     def forward(self, x):
         x = self.weightlayer(x)
+        x_weight = x
         for conv in self.convs:
             x = conv(x)
             x = self.tanh(x)
-        return x
+        return x + x_weight
 
 class FreqSR2(nn.Module):
     """
@@ -91,7 +92,7 @@ class FreqSR2(nn.Module):
     Paper expects only Y channel from YCbCr, passing in grayscale is okay
     """
     def __init__(self, shape=(1, 128, 128), nlayers=5):
-        super(FreqSR, self).__init__()
+        super(FreqSR2, self).__init__()
         nc, h, w = shape
         layers = []
         for i in range(nlayers):
@@ -104,7 +105,7 @@ class FreqSR2(nn.Module):
     def forward(self, x):
         outputs = []
         for layer in self.layers:
-            x = layer(x) + x
+            x = layer(x)# + x
             outputs.append(x)
         # x = torch.cat(outputs, dim=1)
         # x = self.conv1x1(x)
