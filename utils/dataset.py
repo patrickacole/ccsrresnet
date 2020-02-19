@@ -9,8 +9,8 @@ from torchvision.transforms import ToTensor
 from .image_utils import *
 
 
-class VOC2012(Dataset):
-    def __init__(self, root, image_shape=(256, 256), scale_factor=2, color='rgb', upsample='bicubic'):
+class CXR8Dataset(Dataset):
+    def __init__(self, root, image_shape=(256, 256), scale_factor=4, color='grayscale', upsample='bicubic'):
         if not os.path.exists(root):
             raise OSError("{}, path does not exist..".format(root))
 
@@ -19,7 +19,7 @@ class VOC2012(Dataset):
         self.scale_factor = scale_factor
         self.color = color
         self.upsample = upsample
-        self.samples = os.listdir(root)
+        self.samples = [sample for sample in os.listdir(root) if '.png' in sample]
         self.totensor = ToTensor()
 
     def __len__(self):
@@ -50,14 +50,16 @@ class VOC2012(Dataset):
 
 
 if __name__=="__main__":
-    datapath = os.path.expanduser("~/Downloads/VOCdevkit/VOC2012/JPEGImages/")
-    dataset = VOC2012(datapath)
+    datapath = os.path.expanduser("~/Projects/datasets/CXR8/images/")
+    dataset = CXR8Dataset(datapath, color="grayscale")
     print(len(dataset))
     print(dataset.at(0))
 
     imageLR, imageHR = dataset[0]
-    imageLR = np.asarray(imageLR).transpose(1, 2, 0)
-    imageHR = np.asarray(imageHR).transpose(1, 2, 0)
+    print(imageHR.shape)
+    imageLR = np.asarray(imageLR[0]) #.transpose(1, 2, 0)
+    imageHR = np.asarray(imageHR[0]) #.transpose(1, 2, 0)
+    print(imageHR.shape)
     import matplotlib.pyplot as plt
-    plt.imshow(imageHR)
+    plt.imshow(imageHR, cmap="gray")
     plt.show()
