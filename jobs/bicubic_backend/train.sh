@@ -22,10 +22,13 @@ then
 
     FILESETLIST="images_01.tar.gz images_02.tar.gz"
     for FILESET in ${FILESETLIST}
+    do
+        echo "Copying over ${FILESET}.."
         cp /shared/rsaas/pacole2/CXR8/${FILESET} /data/pacole2/CXR8
         cd /data/pacole2/CXR8/
         tar -xzf ${FILESET}
         cd /home/pacole2/
+    done
 fi
 
 # Data is ready now run python file
