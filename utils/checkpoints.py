@@ -17,7 +17,7 @@ def save_checkpoint(state, isbest, checkpoint):
     filepath = os.path.join(checkpoint, 'last.pth')
     if not os.path.exists(checkpoint):
         print("Checkpoint Directory does not exist! Making directory {}".format(checkpoint))
-        os.mkdir(checkpoint)
+        os.makedirs(checkpoint)
 
     torch.save(state, filepath)
     if isbest:

@@ -6,14 +6,14 @@ import math
 Code in this file is taken from https://github.com/twtygqyy/pytorch-SRResNet
 """
 
-class _Residual_Block(nn.Module):
+class Residual_Block(nn.Module):
     def __init__(self):
-        super(_Residual_Block, self).__init__()
+        super(Residual_Block, self).__init__()
 
-        self.conv1 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True)
         self.in1 = nn.InstanceNorm2d(64, affine=True)
         self.relu = nn.LeakyReLU(0.2, inplace=True)
-        self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True)
         self.in2 = nn.InstanceNorm2d(64, affine=True)
 
     def forward(self, x):
@@ -23,28 +23,35 @@ class _Residual_Block(nn.Module):
         output = torch.add(output,identity_data)
         return output
 
-class _NetG(nn.Module):
-    def __init__(self):
-        super(_NetG, self).__init__()
+class SRResNet(nn.Module):
+    def __init__(self, nc=3, upscale=4):
+        super(SRResNet, self).__init__()
 
-        self.conv_input = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=9, stride=1, padding=4, bias=False)
+        self.conv_input = nn.Conv2d(in_channels=nc, out_channels=64, kernel_size=9, stride=1, padding=4, bias=True)
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
-        self.residual = self.make_layer(_Residual_Block, 16)
+        self.residual = self.make_layer(Residual_Block, 16)
 
-        self.conv_mid = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv_mid = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True)
         self.bn_mid = nn.InstanceNorm2d(64, affine=True)
 
-        self.upscale4x = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.PixelShuffle(2),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.PixelShuffle(2),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
+        if upscale == 2:
+            self.upscale = nn.Sequential(
+                nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3, stride=1, padding=1, bias=True),
+                nn.PixelShuffle(2),
+                nn.LeakyReLU(0.2, inplace=True),
+            )
+        elif upscale == 4:
+            self.upscale = nn.Sequential(
+                nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3, stride=1, padding=1, bias=True),
+                nn.PixelShuffle(2),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3, stride=1, padding=1, bias=True),
+                nn.PixelShuffle(2),
+                nn.LeakyReLU(0.2, inplace=True),
+            )
 
-        self.conv_output = nn.Conv2d(in_channels=64, out_channels=3, kernel_size=9, stride=1, padding=4, bias=False)
+        self.conv_output = nn.Conv2d(in_channels=64, out_channels=nc, kernel_size=9, stride=1, padding=4, bias=True)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -65,58 +72,60 @@ class _NetG(nn.Module):
         out = self.residual(out)
         out = self.bn_mid(self.conv_mid(out))
         out = torch.add(out,residual)
-        out = self.upscale4x(out)
+        out = self.upscale(out)
         out = self.conv_output(out)
-        return out
+        return torch.sigmoid(out)
 
-class _NetD(nn.Module):
-    def __init__(self):
-        super(_NetD, self).__init__()
+class Discriminator(nn.Module):
+    def __init__(self, nc=3):
+        super(Discriminator, self).__init__()
 
         self.features = nn.Sequential(
 
             # input is (3) x 96 x 96
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.Conv2d(in_channels=nc, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True),
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (64) x 96 x 96
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=2, padding=1, bias=True),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (64) x 96 x 96
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1, bias=True),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (64) x 48 x 48
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=4, stride=2, padding=1, bias=True),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (128) x 48 x 48
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1, bias=True),
             nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (256) x 24 x 24
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=4, stride=2, padding=1, bias=True),
             nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (256) x 12 x 12
-            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=1, bias=True),
             nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (512) x 12 x 12
-            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=4, stride=2, padding=1, bias=True),
             nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2, inplace=True),
         )
 
         self.LeakyReLU = nn.LeakyReLU(0.2, inplace=True)
-        self.fc1 = nn.Linear(512 * 6 * 6, 1024)
+        # 128 x 128 -> 512 * 8 * 8
+        # 96  x 96  -> 512 * 6 * 6
+        self.fc1 = nn.Linear(512 * 8 * 8, 1024)
         self.fc2 = nn.Linear(1024, 1)
         self.sigmoid = nn.Sigmoid()
 
@@ -143,3 +152,14 @@ class _NetD(nn.Module):
         out = self.fc2(out)
         out = self.sigmoid(out)
         return out.view(-1, 1).squeeze(1)
+
+
+if __name__=="__main__":
+    model = SRResNet(nc=1, upscale=2)
+    x = torch.zeros((4, 1, 64, 64))
+    y = model(x)
+    print(y.shape)
+
+    discriminator = Discriminator(nc=1)
+    z = discriminator(y)
+    print(z.shape)

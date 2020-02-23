@@ -49,17 +49,58 @@ class CXR8Dataset(Dataset):
         return os.path.join(self.root, self.samples[idx])
 
 
-if __name__=="__main__":
-    datapath = os.path.expanduser("~/Projects/datasets/CXR8/images/")
-    dataset = CXR8Dataset(datapath, color="grayscale")
-    print(len(dataset))
-    print(dataset.at(0))
+class NoisyXrayDataset(Dataset):
+    def __init__(self, root):
+        # root should be the path to xray_images
+        if not os.path.exists(root):
+            raise OSError("{}, path does not exist..".format(root))
 
-    imageLR, imageHR = dataset[0]
-    print(imageHR.shape)
-    imageLR = np.asarray(imageLR[0]) #.transpose(1, 2, 0)
-    imageHR = np.asarray(imageHR[0]) #.transpose(1, 2, 0)
-    print(imageHR.shape)
-    import matplotlib.pyplot as plt
-    plt.imshow(imageHR, cmap="gray")
-    plt.show()
+        self.root = root
+        self.samples = [sample for sample in os.listdir(os.path.join(root, 'train_images_64x64')) if '.png' in sample]
+        self.totensor = ToTensor()
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        pathLR = self.at(idx)
+        pathHR = pathLR.replace('64x64', '128x128')
+        imageLR = Image.open(pathLR).convert('L')
+        imageHR = Image.open(pathHR).convert('L')
+
+        return (self.totensor(imageLR), self.totensor(imageHR))
+
+    def at(self, idx):
+        return os.path.join(self.root, 'train_images_64x64', self.samples[idx])
+
+
+if __name__=="__main__":
+    which = 'Noisy'
+    if which == 'CX48':
+        datapath = os.path.expanduser("~/Projects/datasets/CXR8/images/")
+        dataset = CXR8Dataset(datapath, color="grayscale")
+        print(len(dataset))
+        print(dataset.at(0))
+
+        imageLR, imageHR = dataset[0]
+        print(imageHR.shape)
+        imageLR = np.asarray(imageLR[0]) #.transpose(1, 2, 0)
+        imageHR = np.asarray(imageHR[0]) #.transpose(1, 2, 0)
+        print(imageHR.shape)
+        import matplotlib.pyplot as plt
+        plt.imshow(imageHR, cmap="gray")
+        plt.show()
+    elif which == 'Noisy':
+        datapath = os.path.expanduser("~/Projects/datasets/xray_images/")
+        dataset = NoisyXrayDataset(datapath)
+        print(len(dataset))
+        print(dataset.at(0))
+
+        imageLR, imageHR = dataset[0]
+        print(imageHR.shape)
+        imageLR = np.asarray(imageLR[0]) #.transpose(1, 2, 0)
+        imageHR = np.asarray(imageHR[0]) #.transpose(1, 2, 0)
+        print(imageHR.shape)
+        import matplotlib.pyplot as plt
+        plt.imshow(imageLR, cmap="gray")
+        plt.show()
