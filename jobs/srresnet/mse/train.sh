@@ -20,6 +20,7 @@ then
     echo "Copying over data from shared storage"
     cp /shared/rsaas/pacole2/xray_images.zip /data/pacole2/
 
+    cd /data/pacole2/
     unzip -qq xray_images.zip
     rm xray_images.zip
     cd /home/pacole2/
