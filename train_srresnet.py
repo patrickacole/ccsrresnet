@@ -68,7 +68,7 @@ def calc_gradient_penalty(modelD, real_data, fake_data, lmbda=10):
     interpolates = interpolates.to(device)
     interpolates.requires_grad_(True)
 
-    disc_interpolates, _ = modelD(interpolates)
+    disc_interpolates = modelD(interpolates)
 
     gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
                               grad_outputs=torch.ones(disc_interpolates.size()).to(device),
