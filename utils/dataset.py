@@ -6,7 +6,8 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.transforms import ToTensor
 
-from .image_utils import *
+# this is left over from natural images
+# from .image_utils import *
 
 
 class CXR8Dataset(Dataset):
@@ -50,13 +51,14 @@ class CXR8Dataset(Dataset):
 
 
 class NoisyXrayDataset(Dataset):
-    def __init__(self, root):
+    def __init__(self, root, train=True):
         # root should be the path to xray_images
         if not os.path.exists(root):
             raise OSError("{}, path does not exist..".format(root))
 
         self.root = root
-        self.samples = [sample for sample in os.listdir(os.path.join(root, 'train_images_64x64')) if '.png' in sample]
+        self.dir = ['test_images_64x64', 'train_images_64x64'][int(train)]
+        self.samples = [sample for sample in os.listdir(os.path.join(root, self.dir)) if '.png' in sample]
         self.totensor = ToTensor()
 
     def __len__(self):
@@ -71,7 +73,7 @@ class NoisyXrayDataset(Dataset):
         return (self.totensor(imageLR), self.totensor(imageHR))
 
     def at(self, idx):
-        return os.path.join(self.root, 'train_images_64x64', self.samples[idx])
+        return os.path.join(self.root, self.dir, self.samples[idx])
 
 
 if __name__=="__main__":
@@ -92,7 +94,7 @@ if __name__=="__main__":
         plt.show()
     elif which == 'Noisy':
         datapath = os.path.expanduser("~/Projects/datasets/xray_images/")
-        dataset = NoisyXrayDataset(datapath)
+        dataset = NoisyXrayDataset(datapath, train=False)
         print(len(dataset))
         print(dataset.at(0))
 
@@ -102,5 +104,5 @@ if __name__=="__main__":
         imageHR = np.asarray(imageHR[0]) #.transpose(1, 2, 0)
         print(imageHR.shape)
         import matplotlib.pyplot as plt
-        plt.imshow(imageLR, cmap="gray")
+        plt.imshow(imageHR, cmap="gray")
         plt.show()

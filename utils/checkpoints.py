@@ -42,6 +42,14 @@ def load_checkpoint(checkpointdir, prefix, model, optimizer=None):
     else:
         checkpoint = torch.load(checkpoint, map_location='cpu')
 
+    # if model was trained with nn.DataParallel need to get rid of `module.` in every key
+    state_dict = {}
+    for key in checkpoint['state_dict'].keys():
+        if 'module.' in key:
+            state_dict[key.split('module.')[1]] = checkpoint['state_dict'][key]
+        else:
+            state_dict[key] = checkpoint['state_dict'][key]
+
     model.load_state_dict(checkpoint['state_dict'])
 
     if optimizer:

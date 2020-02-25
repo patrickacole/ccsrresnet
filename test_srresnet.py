@@ -1,0 +1,111 @@
+import os
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
+
+from argparse import ArgumentParser
+from torch.utils.data import DataLoader
+
+# custom imports
+from utils.dataset import *
+from utils.checkpoints import *
+from model.SRResNet import *
+
+
+# global variables
+M, N = (128, 128)
+device = None
+args = None
+
+def args_parse():
+    """
+    Returns command line parsed arguments
+    @return args: commandline arguments (Namespace)
+    """
+    parser = ArgumentParser(description="Arguments for training")
+    parser.add_argument('--data', default="../datasets/xray_images/", help="Path to where data is stored")
+    parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
+    parser.add_argument('--num_prints', default=20, type=int, help="Number of times in the testing loop")
+    parser.add_argument('--metric', default="psnr", help="Metric to evaluate model on test data. psnr or rmse")
+    parser.add_argument('--checkpointdir', default="checkpoints/srresnet/", help="Path to checkpoint directory")
+    return parser.parse_args()
+
+def calc_psnr(learned, real):
+    learned = torch.clamp(learned, min=0, max=1)
+    mse = ((learned - real) ** 2).view(real.size(0), -1).mean(dim=-1)
+    psnr = 10.0 * torch.log10(1.0 / mse)
+    return psnr
+
+def calc_rsme(learned, real):
+    learned = torch.clamp(learned, min=0, max=1)
+    mse = ((255.0 * (learned - real)) ** 2).view(real.size(0), -1).mean(dim=-1)
+    rmse = torch.sqrt(mse)
+    return rmse
+
+def test(modelSR, dataloader):
+    criterion = None
+    if args.metric == 'psnr':
+        criterion = calc_psnr
+    elif args.metric == 'rmse':
+        criterion = calc_rsme
+    else:
+        raise NotImplementedError('The metric provided has not been implemented yet')
+
+    # calculate when to print each epoch
+    print_idx = len(dataloader) // args.num_prints
+
+    avg_score = 0.0
+    total_images = 0
+    print("Beginning testing loop...")
+    for i, (imageLR, imageHR) in enumerate(dataloader):
+        imageLR = imageLR.to(device)
+        imageHR = imageHR.to(device)
+
+        with torch.no_grad():
+            learnedHR = modelSR(imageLR)
+
+        score = criterion(learnedHR, imageHR)
+        avg_score += score.sum().item()
+        total_images += imageLR.size(0)
+
+        if (i + 1) % print_idx == 0:
+            if args.metric == 'psnr':
+                print('===> Batch: [{} / {}] Average psnr: {:.2f}'.format(i + 1, len(dataloader), avg_score / total_images))
+            elif args.metric == 'rmse':
+                print('===> Batch: [{} / {}] Average rmse: {:.2f}'.format(i + 1, len(dataloader), avg_score / total_images))
+
+    avg_score /= total_images
+
+    if args.metric == 'psnr':
+        print('Model had an average psnr of {:.2f} on the test dataset'.format(avg_score))
+    elif args.metric == 'rmse':
+        print('Model had an average rmse of {:.2f} on the test dataset'.format(avg_score))
+
+
+if __name__=="__main__":
+    print("Beginning testing for SRResNet model...")
+    args = args_parse()
+
+    print("Using the following hyperparemters:")
+    print("Data:                 " + args.data)
+    print("Batch size:           " + str(args.batch))
+    print("Prints:               " + str(args.num_prints))
+    print("Metric:               " + args.metric)
+    print("Checkpoint directory: " + args.checkpointdir)
+    print("Cuda:                 " + str(torch.cuda.device_count()))
+    print("")
+
+    dataset = NoisyXrayDataset(args.data, train=False)
+    dataloader = DataLoader(dataset, batch_size=args.batch,
+                            shuffle=False, num_workers=8)
+
+    device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
+
+    modelSR = SRResNet(nc=1, upscale=2)
+
+    # load from checkpoint files
+    load_checkpoint(os.path.join(args.checkpointdir, 'super_resolution'), 'last', modelSR)
+
+    modelSR.to(device)
+
+    test(modelSR, dataloader)

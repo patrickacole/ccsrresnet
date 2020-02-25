@@ -37,6 +37,21 @@ class LambdaLR():
     def step(self, epoch):
         return 1.0 - max(0, epoch + self.offset - self.decay_start_epoch) / (self.n_epochs - self.decay_start_epoch)
 
+class MixedLoss():
+    def __init__(self, n_epochs):
+        self.n_epochs = n_epochs
+        self.mse = nn.MSELoss()
+        self.fht2d = FHT2D((M,N))
+        self.wl2 = weightedEuclideanLoss
+
+    def __call__(self, learned, real, epoch):
+        alpha = 1.0 - epoch / self.n_epochs
+        beta = 1.0 - alpha
+
+        mse_loss = self.mse(learned, real)
+        wl2_loss = self.wl2(fht2d(fake_data), fht2d(imageHR))
+        return alpha * mse_loss + beta * wl2_loss
+
 def args_parse():
     """
     Returns command line parsed arguments
