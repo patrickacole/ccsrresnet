@@ -9,6 +9,7 @@ import torch.autograd as autograd
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 
+from PIL import Image
 from argparse import ArgumentParser
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -24,6 +25,8 @@ from model.SRResNet import *
 M, N = (128, 128)
 device = None
 args = None
+test_images = None
+test_names = None
 
 # learning rate decay class
 class LambdaLR():
@@ -49,7 +52,7 @@ class MixedLoss():
         beta = 1.0 - alpha
 
         mse_loss = self.mse(learned, real)
-        wl2_loss = self.wl2(fht2d(fake_data), fht2d(imageHR))
+        wl2_loss = self.wl2(self.fht2d(learned), self.fht2d(real))
         return alpha * mse_loss + beta * wl2_loss
 
 def args_parse():
@@ -64,8 +67,9 @@ def args_parse():
     parser.add_argument('--num_epoch_prints', default=10, type=int, help="Number of times to print each epoch")
     parser.add_argument('--start_decay', default=400, type=int, help="Epoch to start decaying the learning rate")
     parser.add_argument('--batch', default=64, type=int, help="Batch size to use while training")
-    parser.add_argument('--content_loss', default="mse", help="Content loss can currently be wl2 or mse")
+    parser.add_argument('--content_loss', default="mse", help="Content loss can currently be wl2, mse, or mix")
     parser.add_argument('--wlmbda', default=1e-3, type=float, help="Weight of wasserstein loss")
+    parser.add_argument('--checksample', default=False, action='store_true', help="Whether to save an image intermediately throughout training")
     parser.add_argument('--checkpointdir', default="checkpoints/srresnet/", help="Path to checkpoint directory")
     return parser.parse_args()
 
@@ -137,6 +141,8 @@ def train(modelSR, modelD, dataloader):
     elif args.content_loss == 'wl2':
         criterion = weightedEuclideanLoss
         fht2d = FHT2D((M,N))
+    elif args.content_loss == 'mix':
+        criterion = MixedLoss(args.epochs)
     else:
         raise NotImplementedError('The loss provided has not been implemented yet')
 
@@ -223,6 +229,8 @@ def train(modelSR, modelD, dataloader):
                 content_loss = criterion(fake_data, imageHR)
             elif args.content_loss == 'wl2':
                 content_loss = criterion(fht2d(fake_data), fht2d(imageHR))
+            elif args.content_loss == 'mix':
+                content_loss = criterion(fake_data, imageHR, e)
             avg_content_loss += content_loss.item()
 
             ## calculate gradient
@@ -263,6 +271,24 @@ def train(modelSR, modelD, dataloader):
               "Content Loss: {:.4f},".format(avg_content_loss / len(dataloader)),
               "PSNR: {:.2f}".format(avg_psnr / len(dataloader)))
 
+        # check to save sample, only do every 50 epochs
+        if args.checksample and (e + 1) % 50 == 0:
+            with torch.no_grad():
+                learned = modelSR(test_images)
+
+            # convert to numpy array
+            learned = learned.cpu().data.numpy()
+
+            # if output directory is not made create one
+            savedir = os.path.join('output', args.content_loss)
+            if not os.path.exists(savedir):
+                os.makedirs(savedir)
+            for i in range(learned.shape[0]):
+                # get test image, 0 index is because grayscale
+                image = learned[i][0]
+                image = Image.fromarray((255 * image).astype(np.uint8))
+                image.save(os.path.join(savedir, test_names[i]))
+
         # save models
         sr_state = {'epoch' : e + 1,
                     'state_dict' : modelSR.state_dict(),
@@ -289,11 +315,16 @@ if __name__=="__main__":
     print("Batch size:           " + str(args.batch))
     print("Content loss:         " + args.content_loss)
     print("WLambda:              " + str(args.wlmbda))
+    print("Check Sample:         " + str(args.checksample))
     print("Checkpoint directory: " + args.checkpointdir)
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
 
     dataset = NoisyXrayDataset(args.data)
+    if args.checksample:
+        test_images = dataset[0][0].unsqueeze(0)
+        test_names = [dataset.at(0).lstrip(os.path.join(args.data, 'train_images_64x64'))]
+
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
 
