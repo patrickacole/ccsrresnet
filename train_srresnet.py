@@ -272,9 +272,9 @@ def train(modelSR, modelD, dataloader):
               "PSNR: {:.2f}".format(avg_psnr / len(dataloader)))
 
         # check to save sample, only do every 50 epochs
-        if args.checksample and (e + 1) % 50 == 0:
+        if args.checksample and ((e + 1) % 50 == 0 or e == 0):
             with torch.no_grad():
-                learned = modelSR(test_images)
+                learned = modelSR(test_images.to(device))
 
             # convert to numpy array
             learned = learned.cpu().data.numpy()

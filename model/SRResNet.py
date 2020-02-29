@@ -150,7 +150,7 @@ class Discriminator(nn.Module):
         out = self.LeakyReLU(out)
 
         out = self.fc2(out)
-        out = self.sigmoid(out)
+        # out = self.sigmoid(out)
         return out.view(-1, 1).squeeze(1)
 
 
