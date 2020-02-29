@@ -67,7 +67,8 @@ def args_parse():
     parser.add_argument('--num_epoch_prints', default=10, type=int, help="Number of times to print each epoch")
     parser.add_argument('--start_decay', default=400, type=int, help="Epoch to start decaying the learning rate")
     parser.add_argument('--batch', default=64, type=int, help="Batch size to use while training")
-    parser.add_argument('--content_loss', default="mse", help="Content loss can currently be wl2, mse, or mix")
+    parser.add_argument('--content_loss', default="mse", help="Content loss can currently be wl2, mse, mix, abs, or ploss")
+    parser.add_argument('--clmbda', default=1.0, type=float, help="Weight of content loss")
     parser.add_argument('--wlmbda', default=1e-3, type=float, help="Weight of wasserstein loss")
     parser.add_argument('--checksample', default=False, action='store_true', help="Whether to save an image intermediately throughout training")
     parser.add_argument('--checkpointdir', default="checkpoints/srresnet/", help="Path to checkpoint directory")
@@ -136,8 +137,10 @@ def train(modelSR, modelD, dataloader):
     # set loss function for content loss
     criterion = None
     fht2d = None
-    if args.content_loss == 'mse':
+    if args.content_loss == 'mse' or args.content_loss == 'ploss':
         criterion = nn.MSELoss()
+    elif args.content_loss == 'abs':
+        criterion = nn.L1Loss()
     elif args.content_loss == 'wl2':
         criterion = weightedEuclideanLoss
         fht2d = FHT2D((M,N))
@@ -219,22 +222,29 @@ def train(modelSR, modelD, dataloader):
             fake_data = modelSR(imageLR)
 
             ## calculate wasserstein loss
-            fake_label = modelD(fake_data)
+            if args.content_loss == 'ploss':
+                fake_label, fake_feats = modelD(fake_data, features=True)
+                _, real_feats = modelD(imageHR, features=True)
+            else:
+                fake_label = modelD(fake_data)
             wassertein_loss = -fake_label.mean()
             avg_wasserstein_loss += wassertein_loss.item()
 
             ## calculate content loss
             content_loss = None
-            if args.content_loss == 'mse':
+            if args.content_loss == 'mse' or args.content_loss == 'abs':
                 content_loss = criterion(fake_data, imageHR)
             elif args.content_loss == 'wl2':
                 content_loss = criterion(fht2d(fake_data), fht2d(imageHR))
             elif args.content_loss == 'mix':
                 content_loss = criterion(fake_data, imageHR, e)
+            elif args.content_loss == 'ploss':
+                content_loss = criterion(fake_feats, real_feats.detach())
+                del fake_feats, real_feats
             avg_content_loss += content_loss.item()
 
             ## calculate gradient
-            sr_loss = content_loss + args.wlmbda * wassertein_loss
+            sr_loss = args.clmbda * content_loss + args.wlmbda * wassertein_loss
             sr_loss.backward()
 
             ## update parameters
@@ -272,7 +282,7 @@ def train(modelSR, modelD, dataloader):
               "PSNR: {:.2f}".format(avg_psnr / len(dataloader)))
 
         # check to save sample, only do every 50 epochs
-        if args.checksample and ((e + 1) % 50 == 0 or e == 0):
+        if args.checksample and (e + 1) % 50 == 0:
             with torch.no_grad():
                 learned = modelSR(test_images.to(device))
 
@@ -314,6 +324,7 @@ if __name__=="__main__":
     print("Start decay:          " + str(args.start_decay))
     print("Batch size:           " + str(args.batch))
     print("Content loss:         " + args.content_loss)
+    print("CLambda:              " + str(args.clmbda))
     print("WLambda:              " + str(args.wlmbda))
     print("Check Sample:         " + str(args.checksample))
     print("Checkpoint directory: " + args.checkpointdir)

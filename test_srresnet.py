@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
+from PIL import Image
 from argparse import ArgumentParser
 from torch.utils.data import DataLoader
 
@@ -16,6 +17,7 @@ from model.SRResNet import *
 M, N = (128, 128)
 device = None
 args = None
+dataset = None
 
 def args_parse():
     """
@@ -25,8 +27,9 @@ def args_parse():
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('--data', default="../datasets/xray_images/", help="Path to where data is stored")
     parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
-    parser.add_argument('--num_prints', default=20, type=int, help="Number of times in the testing loop")
-    parser.add_argument('--metric', default="psnr", help="Metric to evaluate model on test data. psnr or rmse")
+    parser.add_argument('--num_prints', default=8, type=int, help="Number of times in the testing loop")
+    parser.add_argument('--metric', default="all", help="Metric to evaluate model on test data. psnr, rmse, or all")
+    parser.add_argument('--savedir', default="output/srresnet/", help="Path to store generated super resolution files")
     parser.add_argument('--checkpointdir', default="checkpoints/srresnet/", help="Path to checkpoint directory")
     return parser.parse_args()
 
@@ -48,13 +51,19 @@ def test(modelSR, dataloader):
         criterion = calc_psnr
     elif args.metric == 'rmse':
         criterion = calc_rsme
+    elif args.metric == 'all':
+        criterion = [calc_psnr, calc_rsme]
+        criterion_names = ['psnr', 'rmse']
     else:
         raise NotImplementedError('The metric provided has not been implemented yet')
 
     # calculate when to print each epoch
     print_idx = len(dataloader) // args.num_prints
 
-    avg_score = 0.0
+    if args.metric == 'all':
+        avg_score = [0.0] * len(criterion)
+    else:
+        avg_score = 0.0
     total_images = 0
     print("Beginning testing loop...")
     for i, (imageLR, imageHR) in enumerate(dataloader):
@@ -64,23 +73,44 @@ def test(modelSR, dataloader):
         with torch.no_grad():
             learnedHR = modelSR(imageLR)
 
-        score = criterion(learnedHR, imageHR)
-        avg_score += score.sum().item()
+        # save images
+        for j in range(imageLR.size(0)):
+            image = learnedHR[j][0]
+            image = image.cpu().data.numpy()
+            filepath = dataset.at(total_images + j).lstrip(os.path.join(args.data, 'test_images_64x64'))
+            image = Image.fromarray((255 * image).astype(np.uint8))
+            image.save(os.path.join(args.savedir, filepath))
+
+        if args.metric == 'all':
+            score = [c(learnedHR, imageHR) for c in criterion]
+            for j in range(len(score)):
+                avg_score[j] += score[j].sum().item()
+        else:
+            score = criterion(learnedHR, imageHR)
+            avg_score += score.sum().item()
         total_images += imageLR.size(0)
 
         if (i + 1) % print_idx == 0:
             if args.metric == 'psnr':
                 print('===> Batch: [{} / {}] Average psnr: {:.2f}'.format(i + 1, len(dataloader), avg_score / total_images))
             elif args.metric == 'rmse':
-                print('===> Batch: [{} / {}] Average rmse: {:.2f}'.format(i + 1, len(dataloader), avg_score / total_images))
+                print('===> Batch: [{} / {}] Sum rmse: {:.2f}'.format(i + 1, len(dataloader), avg_score))
+            elif args.metric == 'all':
+                print('===> Batch: [{} / {}] Average psrn: {:.2f} Average rmse: {:.2f}'.format(i + 1, len(dataloader), avg_score[0] / total_images, avg_score[1]))
 
-    avg_score /= total_images
+    if args.metric == 'all':
+        avg_score = [score / total_images for score in avg_score]
+    else:
+        avg_score /= total_images
 
     if args.metric == 'psnr':
         print('Model had an average psnr of {:.2f} on the test dataset'.format(avg_score))
     elif args.metric == 'rmse':
-        print('Model had an average rmse of {:.2f} on the test dataset'.format(avg_score))
-
+        print('Model had a sum rmse of {:.2f} on the test dataset'.format(avg_score * total_images))
+    elif args.metric == 'all':
+        print('Model had an average psnr of {:.2f} and a sum rmse of {:.2f} on the test dataset'.format(avg_score[0], avg_score[1] * total_images))
+        with open(os.path.join(args.savedir, 'results.txt'), 'w') as fptr:
+            fptr.write('Model had an average psnr of {:.2f} and a sum rmse of {:.2f} on the test dataset\n'.format(avg_score[0], avg_score[1] * total_images))
 
 if __name__=="__main__":
     print("Beginning testing for SRResNet model...")
@@ -91,6 +121,7 @@ if __name__=="__main__":
     print("Batch size:           " + str(args.batch))
     print("Prints:               " + str(args.num_prints))
     print("Metric:               " + args.metric)
+    print("Save directory:       " + args.savedir)
     print("Checkpoint directory: " + args.checkpointdir)
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
@@ -107,5 +138,9 @@ if __name__=="__main__":
     load_checkpoint(os.path.join(args.checkpointdir, 'super_resolution'), 'last', modelSR)
 
     modelSR.to(device)
+
+    # check to make sure output directory is made
+    if not os.path.exists(args.savedir):
+        os.makedirs(args.savedir)
 
     test(modelSR, dataloader)

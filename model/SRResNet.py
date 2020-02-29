@@ -76,56 +76,57 @@ class SRResNet(nn.Module):
         out = self.conv_output(out)
         return torch.sigmoid(out)
 
+class ConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, bias=True, batchnorm=True):
+        super(ConvBlock, self).__init__()
+        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=bias)
+        self.bn = (None, nn.BatchNorm2d(out_channels))[int(batchnorm)]
+        self.relu = nn.LeakyReLU(0.2, inplace=True)
+
+    def forward(self, x):
+        x = self.conv(x)
+        if self.bn:
+            x = self.bn(x)
+        x = self.relu(x)
+        return x
+
 class Discriminator(nn.Module):
     def __init__(self, nc=3):
         super(Discriminator, self).__init__()
 
         self.features = nn.Sequential(
+            # input is 1 x 128 x 128
+            ConvBlock(in_channels=nc, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True, batchnorm=False),
 
-            # input is (3) x 96 x 96
-            nn.Conv2d(in_channels=nc, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 64 x 128 x 128
+            ConvBlock(in_channels=64, out_channels=64, kernel_size=4, stride=2, padding=1, bias=True, batchnorm=True),
 
-            # state size. (64) x 96 x 96
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=2, padding=1, bias=True),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 64 x 128 x 128
+            ConvBlock(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1, bias=True, batchnorm=True),
 
-            # state size. (64) x 96 x 96
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 128 x 64 x 64
+            ConvBlock(in_channels=128, out_channels=128, kernel_size=4, stride=2, padding=1, bias=True, batchnorm=True),
 
-            # state size. (64) x 48 x 48
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=4, stride=2, padding=1, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 128 x 64 x 64
+            ConvBlock(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1, bias=True, batchnorm=True),
 
-            # state size. (128) x 48 x 48
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 256 x 32 x 32
+            ConvBlock(in_channels=256, out_channels=256, kernel_size=4, stride=2, padding=1, bias=True, batchnorm=True),
 
-            # state size. (256) x 24 x 24
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=4, stride=2, padding=1, bias=True),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 256 x 32 x 32
+            ConvBlock(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=1, bias=True, batchnorm=True),
 
-            # state size. (256) x 12 x 12
-            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 512 x 16 x 16
+            ConvBlock(in_channels=512, out_channels=512, kernel_size=4, stride=2, padding=1, bias=True, batchnorm=True),
 
-            # state size. (512) x 12 x 12
-            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=4, stride=2, padding=1, bias=True),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 512 x 8 x 8
+            ConvBlock(in_channels=512, out_channels=512, kernel_size=4, stride=2, padding=1, bias=True, batchnorm=True)
         )
 
         self.LeakyReLU = nn.LeakyReLU(0.2, inplace=True)
-        # 128 x 128 -> 512 * 8 * 8
+        # 128 x 128 -> 512 * 4 * 4 // Added another layer to reduce size more
         # 96  x 96  -> 512 * 6 * 6
-        self.fc1 = nn.Linear(512 * 8 * 8, 1024)
+        self.fc1 = nn.Linear(512 * 4 * 4, 1024)
         self.fc2 = nn.Linear(1024, 1)
         self.sigmoid = nn.Sigmoid()
 
@@ -136,22 +137,26 @@ class Discriminator(nn.Module):
                 m.weight.data.normal_(1.0, 0.02)
                 m.bias.data.fill_(0)
 
-    def forward(self, input):
+    def forward(self, x, features=False):
+        x = self.features(x)
 
-        out = self.features(input)
+        if features:
+            feats = x
 
-        # state size. (512) x 6 x 6
-        out = out.view(out.size(0), -1)
+        # state size. (512) x 4 x 4
+        x = x.view(x.size(0), -1)
 
-        # state size. (512 x 6 x 6)
-        out = self.fc1(out)
+        # state size. (512 x 4 x 4)
+        x = self.fc1(x)
 
         # state size. (1024)
-        out = self.LeakyReLU(out)
+        x = self.LeakyReLU(x)
 
-        out = self.fc2(out)
+        x = self.fc2(x)
         # out = self.sigmoid(out)
-        return out.view(-1, 1).squeeze(1)
+        if features:
+            return x.view(-1, 1).squeeze(1), feats
+        return x.view(-1, 1).squeeze(1)
 
 
 if __name__=="__main__":
