@@ -140,14 +140,13 @@ class Discriminator(nn.Module):
     def forward(self, x, features=False):
         x = self.features(x)
 
-        if features:
-            feats = x
-
         # state size. (512) x 4 x 4
         x = x.view(x.size(0), -1)
 
         # state size. (512 x 4 x 4)
         x = self.fc1(x)
+        if features:
+            feats = x
 
         # state size. (1024)
         x = self.LeakyReLU(x)

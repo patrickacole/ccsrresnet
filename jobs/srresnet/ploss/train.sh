@@ -29,4 +29,4 @@ fi
 # Data is ready now run python file
 cd ~/Projects/freq-sr/
 echo "Running python script now"
-python train_srresnet.py --data /data/pacole2/xray_images/ --content_loss ploss --checkpointdir checkpoints/srresnet/ploss/ --checksample --epochs 400 --start_decay 350
+python train_srresnet.py --data /data/pacole2/xray_images/ --content_loss ploss --checkpointdir checkpoints/srresnet/ploss/ --checksample --epochs 400 --start_decay 350 --wlmbda 1e-1
