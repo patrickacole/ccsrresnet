@@ -137,8 +137,10 @@ def train(modelSR, modelD, dataloader):
     # set loss function for content loss
     criterion = None
     fht2d = None
-    if args.content_loss == 'mse' or args.content_loss == 'ploss':
+    if args.content_loss == 'mse':
         criterion = nn.MSELoss()
+    elif args.content_loss == 'ploss':
+        criterion = nn.MSELoss(size_average=False)
     elif args.content_loss == 'abs':
         criterion = nn.L1Loss()
     elif args.content_loss == 'wl2':
