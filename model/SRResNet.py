@@ -136,7 +136,7 @@ class Discriminator(nn.Module):
                 m.weight.data.normal_(1.0, 0.02)
                 m.bias.data.fill_(0)
 
-    def forward(self, x, features=False):
+    def forward(self, x):
         x = self.features(x)
         # state size. (512) x 8 x 8
         x = x.view(x.size(0), -1)
@@ -144,13 +144,8 @@ class Discriminator(nn.Module):
         x = self.fc1(x)
         # state size. (1024)
         x = self.LeakyReLU(x)
-        if features:
-            feats = x
-
         x = self.fc2(x)
         # out = self.sigmoid(out)
-        if features:
-            return x.view(-1, 1).squeeze(1), feats
         return x.view(-1, 1).squeeze(1)
 
 
@@ -161,6 +156,5 @@ if __name__=="__main__":
     print(y.shape)
 
     discriminator = Discriminator(nc=1)
-    z, feats = discriminator(y, features=True)
+    z = discriminator(y)
     print(z.shape)
-    print(feats.shape)
