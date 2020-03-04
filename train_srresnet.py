@@ -140,7 +140,7 @@ def train(modelSR, modelD, dataloader):
     if args.content_loss == 'mse':
         criterion = nn.MSELoss()
     elif args.content_loss == 'ploss':
-        criterion = nn.MSELoss(size_average=False)
+        criterion = nn.MSELoss()
     elif args.content_loss == 'abs':
         criterion = nn.L1Loss()
     elif args.content_loss == 'wl2':
