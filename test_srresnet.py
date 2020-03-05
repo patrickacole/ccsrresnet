@@ -96,7 +96,7 @@ def test(modelSR, dataloader):
             elif args.metric == 'rmse':
                 print('===> Batch: [{} / {}] Sum rmse: {:.2f}'.format(i + 1, len(dataloader), avg_score))
             elif args.metric == 'all':
-                print('===> Batch: [{} / {}] Average psrn: {:.2f} Average rmse: {:.2f}'.format(i + 1, len(dataloader), avg_score[0] / total_images, avg_score[1]))
+                print('===> Batch: [{} / {}] Average psnr: {:.2f} Average rmse: {:.2f}'.format(i + 1, len(dataloader), avg_score[0] / total_images, avg_score[1]))
 
     if args.metric == 'all':
         avg_score = [score / total_images for score in avg_score]

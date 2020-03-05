@@ -285,7 +285,10 @@ def train(modelSR, modelD, dataloader):
             learned = learned.cpu().data.numpy()
 
             # if output directory is not made create one
-            savedir = os.path.join('output', args.content_loss)
+            savedir = 'wgan'
+            if args.content_loss != 'None':
+                savedir = args.content_loss
+            savedir = os.path.join('output', savedir)
             if not os.path.exists(savedir):
                 os.makedirs(savedir)
             for i in range(learned.shape[0]):

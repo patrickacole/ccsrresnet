@@ -50,7 +50,7 @@ def load_checkpoint(checkpointdir, prefix, model, optimizer=None):
         else:
             state_dict[key] = checkpoint['state_dict'][key]
 
-    model.load_state_dict(checkpoint['state_dict'])
+    model.load_state_dict(state_dict)
 
     if optimizer:
         optimizer.load_state_dict(checkpoint['optim_dict'])
