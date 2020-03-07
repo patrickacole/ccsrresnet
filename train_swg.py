@@ -80,6 +80,9 @@ def wasserstein2d(fake_feats, real_feats, fdim):
     fake_projs = fake_feats @ theta
     real_projs = real_feats.detach() @ theta
 
+    return torch.mean((fake_projs - real_projs) ** 2) # don't believe sorting will work because will match incorrect pairs
+
+    '''
     real_sorted, real_indices = torch.topk(real_projs, args.batch, dim=0)
     fake_sorted, fake_indices = torch.topk(fake_projs, args.batch, dim=0)
 
@@ -92,12 +95,15 @@ def wasserstein2d(fake_feats, real_feats, fdim):
     # new index = row + index
     rows = torch.tensor([args.batch * np.floor(i * 1.0 / args.batch) for i in range(args.nprojections * args.batch)])
     rows = rows.type(torch.int32)
+    rows = rows.to(device)
 
     flat_idx = fake_indices.view(-1) + rows.view(-1)
     rearranged_real = torch.zeros_like(flat_real).scatter_(0, flat_idx, flat_real)
     rearranged_real = rearranged_real.view((args.batch, args.nprojections))
+    rearranged_real = rearranged_real.to(device)
 
     return torch.mean((fake_projs - rearranged_real) ** 2)
+    '''
 
 def train(modelSR, modelD, dataloader):
     # set optimizers
@@ -123,7 +129,11 @@ def train(modelSR, modelD, dataloader):
     swg_criterion = nn.BCEWithLogitsLoss()
 
     # get dimension of features from discriminator
-    fdim = modelD.fdim
+    ## try-except used to account for dataparallel wrapper
+    try:
+        fdim = modelD.fdim
+    except:
+        fdim = modelD.module.fdim
 
     # calculate when to print each epoch
     print_idx = len(dataloader) // args.num_epoch_prints
@@ -208,9 +218,9 @@ def train(modelSR, modelD, dataloader):
             ## calculate content loss
             content_loss = None
             if args.content_loss == 'mse' or args.content_loss == 'abs':
-                content_loss = criterion(fake_data, imageHR)
+                content_loss = c_criterion(fake_data, imageHR)
             elif args.content_loss == 'None':
-                content_loss = torch.tensor(0.0)
+                content_loss = torch.tensor(0.0).to(device)
             avg_content_loss += content_loss.item()
 
             ## calculate gradient

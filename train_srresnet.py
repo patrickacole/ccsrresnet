@@ -235,7 +235,7 @@ def train(modelSR, modelD, dataloader):
             elif args.content_loss == 'mix':
                 content_loss = criterion(fake_data, imageHR, e)
             elif args.content_loss == 'None':
-                content_loss = torch.tensor(0.0)
+                content_loss = torch.tensor(0.0).to(device)
             avg_content_loss += content_loss.item()
 
             ## calculate gradient
