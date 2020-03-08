@@ -1,7 +1,7 @@
 import os
 import torch
-import skimage
 import numpy as np
+import scipy.ndimage as ndimage
 
 from PIL import Image
 from torch.utils.data import Dataset
@@ -33,7 +33,10 @@ class CXR8Dataset(Dataset):
 
         if self.add_noise:
             imageLR = np.asarray(imageLR)
+            nrows, ncols = imageLR.shape
             imageLR = np.random.poisson(imageLR)
+            if self.scale_factor == 1:
+                imageLR = ndimage.gaussian_filter(imageLR, sigma=1.0)
             imageLR = np.clip(imageLR, 0, 255).astype(np.uint8)
             imageLR = Image.fromarray(imageLR)
 
@@ -74,7 +77,7 @@ if __name__=="__main__":
     which = 'CXR8'
     if which == 'CXR8':
         datapath = os.path.expanduser("~/Projects/datasets/miniCXR8/images/")
-        dataset = CXR8Dataset(datapath, scale_factor=4, add_noise=True)
+        dataset = CXR8Dataset(datapath, scale_factor=1, add_noise=True)
         print(len(dataset))
         print(dataset.at(0))
 
@@ -86,7 +89,7 @@ if __name__=="__main__":
         print(imageLR.max(), imageLR.min())
         import matplotlib.pyplot as plt
         plt.style.use('dark_background')
-        fig, axes = plt.subplots(1, 2, figsize=(5, 3), gridspec_kw={'width_ratios': [1, 2]})
+        fig, axes = plt.subplots(1, 2, figsize=(5, 3))
         axes[0].imshow(imageLR, cmap='gray')
         axes[0].axis('off')
         axes[0].set_title('Noise')

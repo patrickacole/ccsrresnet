@@ -158,3 +158,6 @@ if __name__=="__main__":
     discriminator = Discriminator(nc=1)
     z = discriminator(y)
     print(z.shape)
+
+    # from torchsummary import summary
+    # summary(model, (1, 64, 64))
