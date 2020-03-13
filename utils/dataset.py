@@ -12,7 +12,7 @@ from torchvision.transforms import ToTensor
 
 
 class CXR8Dataset(Dataset):
-    def __init__(self, root, image_shape=(256, 256), scale_factor=4, add_noise=True):
+    def __init__(self, root, image_shape=(256, 256), scale_factor=4, add_noise=True, crop_size=None):
         if not os.path.exists(root):
             raise OSError("{}, path does not exist..".format(root))
 
@@ -20,16 +20,33 @@ class CXR8Dataset(Dataset):
         self.image_shape = np.asarray(image_shape)
         self.scale_factor = scale_factor
         self.add_noise = add_noise
-        self.samples = [sample for sample in os.listdir(root) if '.png' in sample]
+        self.crop_size = crop_size
+        self.samples = [sample for sample in os.listdir(root) if ('.png' in sample and '._' not in sample)]
         self.totensor = ToTensor()
 
     def __len__(self):
         return len(self.samples)
 
+    def random_crop(self, image):
+        image = np.asarray(image)
+        h, w = image.shape
+        c_h, c_w = self.crop_size
+
+        x_start = np.random.randint(0, h - c_h)
+        y_start = np.random.randint(0, w - c_w)
+
+        image = image[x_start:x_start + c_h, y_start:y_start + c_w]
+        return Image.fromarray(image)
+
     def __getitem__(self, idx):
         image = Image.open(self.at(idx)).convert('L')
-        imageHR = image.resize(self.image_shape[::-1], resample=Image.LANCZOS)
-        imageLR = image.resize(self.image_shape[::-1] // self.scale_factor, resample=Image.LANCZOS)
+        if self.crop_size:
+            crop_size = np.asarray(self.crop_size)
+            imageHR = self.random_crop(image)
+            imageLR = imageHR.resize(crop_size[::-1] // self.scale_factor, resample=Image.LANCZOS)
+        else:
+            imageHR = image.resize(self.image_shape[::-1], resample=Image.LANCZOS)
+            imageLR = image.resize(self.image_shape[::-1] // self.scale_factor, resample=Image.LANCZOS)
 
         if self.add_noise:
             imageLR = np.asarray(imageLR)
@@ -77,7 +94,7 @@ if __name__=="__main__":
     which = 'CXR8'
     if which == 'CXR8':
         datapath = os.path.expanduser("~/Projects/datasets/miniCXR8/images/")
-        dataset = CXR8Dataset(datapath, scale_factor=1, add_noise=True)
+        dataset = CXR8Dataset(datapath, scale_factor=1, add_noise=True, crop_size=(96,96))
         print(len(dataset))
         print(dataset.at(0))
 
