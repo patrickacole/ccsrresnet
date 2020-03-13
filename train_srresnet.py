@@ -62,6 +62,8 @@ def args_parse():
     """
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('--data', default="../datasets/xray_images/", help="Path to where data is stored")
+    parser.add_argument('--dataset', default="xray_images", help="Type of dataset can be xray_images or CXR8")
+    parser.add_argument('--upscale', default=2, type=int, help="Amount to upscale by")
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=500, type=int, help="Number of epochs to train")
     parser.add_argument('--num_epoch_prints', default=10, type=int, help="Number of times to print each epoch")
@@ -277,7 +279,7 @@ def train(modelSR, modelD, dataloader):
               "PSNR: {:.2f}".format(avg_psnr / len(dataloader)))
 
         # check to save sample, only do every 50 epochs
-        if args.checksample and (e + 1) % 50 == 0:
+        if args.checksample and ((e + 1) % 50 == 0 or e == 0):
             with torch.no_grad():
                 learned = modelSR(test_images.to(device))
 
@@ -316,6 +318,8 @@ if __name__=="__main__":
 
     print("Using the following hyperparemters:")
     print("Data:                 " + args.data)
+    print("Dataset:              " + args.dataset)
+    print("Upscale:              " + str(args.upscale))
     print("Learning rate:        " + str(args.lr))
     print("Number of epochs:     " + str(args.epochs))
     print("Prints per epoch:     " + str(args.num_epoch_prints))
@@ -329,18 +333,27 @@ if __name__=="__main__":
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
 
-    dataset = NoisyXrayDataset(args.data)
-    if args.checksample:
-        test_images = dataset[0][0].unsqueeze(0)
-        test_names = [dataset.at(0).lstrip(os.path.join(args.data, 'train_images_64x64'))]
+    if args.dataset == 'xray_images':
+        dataset = NoisyXrayDataset(args.data)
+        if args.checksample:
+            test_images = dataset[0][0].unsqueeze(0)
+            test_names = [dataset.at(0).lstrip(os.path.join(args.data, 'train_images_64x64'))]
+    elif args.dataset == 'CXR8':
+        dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True)
+        if args.checksample:
+            test_images = dataset[0][0].unsqueeze(0)
+            test_names = [dataset.at(0).lstrip(args.data)]
 
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
 
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
 
-    modelSR = SRResNet(nc=1, upscale=2)
-    modelD  = Discriminator(nc=1)
+    modelSR = SRResNet(nc=1, upscale=args.upscale)
+    if args.dataset == 'CXR8':
+        modelD  = Discriminator(nc=1, nlayers=5)
+    else:
+        modelD = Discriminator(nc=1)
     if (torch.cuda.device_count() > 1):
         device_ids = list(range(torch.cuda.device_count()))
         print("GPU devices being used: ", device_ids)

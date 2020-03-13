@@ -35,6 +35,7 @@ class SRResNet(nn.Module):
         self.conv_mid = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True)
         self.bn_mid = nn.InstanceNorm2d(64, affine=True)
 
+        self.upscale = None
         if upscale == 2:
             self.upscale = nn.Sequential(
                 nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3, stride=1, padding=1, bias=True),
@@ -72,59 +73,37 @@ class SRResNet(nn.Module):
         out = self.residual(out)
         out = self.bn_mid(self.conv_mid(out))
         out = torch.add(out,residual)
-        out = self.upscale(out)
+        if self.upscale:
+            out = self.upscale(out)
         out = self.conv_output(out)
         return torch.sigmoid(out)
 
 class Discriminator(nn.Module):
-    def __init__(self, nc=3):
+    def __init__(self, nc=3, nlayers=4):
         super(Discriminator, self).__init__()
 
-        self.features = nn.Sequential(
+        self.features = []
 
-            # input is (3) x 128 x 128
-            nn.Conv2d(in_channels=nc, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.LeakyReLU(0.2, inplace=True),
+        # input is (nc) x W x H
+        self.features += [nn.Conv2d(in_channels=nc, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True),
+                          nn.LeakyReLU(0.2, inplace=True)]
+        # state size. (64) x W x H
+        self.features += [nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=2, padding=1, bias=True),
+                          nn.BatchNorm2d(64),
+                          nn.LeakyReLU(0.2, inplace=True)]
 
-            # state size. (64) x 128 x 128
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=2, padding=1, bias=True),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2, inplace=True),
+        for i in range(nlayers - 1):
+            nc = min((2 ** i) * 64 , 512)
+            oc = min((2 ** (i + 1)) * 64, 512)
+            self.features += [nn.Conv2d(in_channels=nc, out_channels=oc, kernel_size=3, stride=1, padding=1, bias=True),
+                              nn.BatchNorm2d(oc),
+                              nn.LeakyReLU(0.2, inplace=True),
+                              nn.Conv2d(in_channels=oc, out_channels=oc, kernel_size=4, stride=2, padding=1, bias=True),
+                              nn.BatchNorm2d(oc),
+                              nn.LeakyReLU(0.2, inplace=True)]
 
-            # state size. (64) x 64 x 64
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            # state size. (64) x 64 x 64
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=4, stride=2, padding=1, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            # state size. (128) x 32 x 32
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            # state size. (256) x 32 x 32
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=4, stride=2, padding=1, bias=True),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            # state size. (256) x 16 x 16
-            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            # state size. (512) x 16 x 16
-            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=4, stride=2, padding=1, bias=True),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
-
+        self.features = nn.Sequential(*self.features)
         self.LeakyReLU = nn.LeakyReLU(0.2, inplace=True)
-        # 128 x 128 -> 512 * 8 * 8
-        # 96  x 96  -> 512 * 6 * 6
         self.fc1 = nn.Linear(512 * 8 * 8, 1024)
         self.fc2 = nn.Linear(1024, 1)
         self.sigmoid = nn.Sigmoid()
@@ -155,7 +134,7 @@ if __name__=="__main__":
     y = model(x)
     print(y.shape)
 
-    discriminator = Discriminator(nc=1)
+    discriminator = Discriminator(nc=1, nlayers=4)
     z = discriminator(y)
     print(z.shape)
 
