@@ -77,14 +77,15 @@ def args_parse():
     return parser.parse_args()
 
 def calc_gradient_penalty(modelD, real_data, fake_data, lmbda=10):
+    batch = real_data.shape[0]
     nc = real_data.shape[1]
     dim = real_data.shape[-1]
-    alpha = torch.rand(args.batch, 1)
-    alpha = alpha.expand(args.batch, int(real_data.nelement() / args.batch)).contiguous()
-    alpha = alpha.view(args.batch, nc, dim, dim)
+    alpha = torch.rand(batch, 1)
+    alpha = alpha.expand(batch, int(real_data.nelement() / batch)).contiguous()
+    alpha = alpha.view(batch, nc, dim, dim)
     alpha = alpha.to(device)
 
-    fake_data = fake_data.view(args.batch, nc, dim, dim)
+    fake_data = fake_data.view(batch, nc, dim, dim)
     interpolates = alpha * real_data.detach() + ((1 - alpha) * fake_data.detach())
 
     interpolates = interpolates.to(device)
@@ -351,7 +352,7 @@ if __name__=="__main__":
 
     modelSR = SRResNet(nc=1, upscale=args.upscale)
     if args.dataset == 'CXR8':
-        modelD  = Discriminator(nc=1, nlayers=5)
+        modelD  = Discriminator(nc=1, nlayers=4)
     else:
         modelD = Discriminator(nc=1)
     if (torch.cuda.device_count() > 1):
