@@ -62,7 +62,7 @@ def args_parse():
     """
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('--data', default="../datasets/xray_images/", help="Path to where data is stored")
-    parser.add_argument('--dataset', default="xray_images", help="Type of dataset can be xray_images or CXR8")
+    parser.add_argument('--dataset', default="xray_images", help="Type of dataset can be xray_images, CXR8, or DeepLesion")
     parser.add_argument('--upscale', default=2, type=int, help="Amount to upscale by")
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=500, type=int, help="Number of epochs to train")
@@ -345,6 +345,11 @@ if __name__=="__main__":
         if args.checksample:
             test_images = dataset[0][0].unsqueeze(0)
             test_names = [dataset.at(0).lstrip(args.data)]
+    elif args.dataset == 'DeepLesion':
+        dataset = DeepLesionDataset(args.data, preprocessed=True)
+        if args.checksample:
+            test_images = dataset[0][0].unsqueeze(0)
+            test_names = ['_'.join(dataset.at(0).lstrip(args.data).split('/'))]
 
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
@@ -352,7 +357,7 @@ if __name__=="__main__":
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
 
     modelSR = SRResNet(nc=1, upscale=args.upscale)
-    if args.dataset == 'CXR8':
+    if args.dataset == 'CXR8' or args.dataset == 'DeepLesion':
         modelD  = Discriminator(nc=1, nlayers=4)
     else:
         modelD = Discriminator(nc=1)
