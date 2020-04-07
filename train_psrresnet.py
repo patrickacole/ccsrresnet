@@ -245,7 +245,7 @@ def train(modelSR, modelD, dataloader):
               "PSNR: {:.2f}".format(avg_psnr / len(dataloader)))
 
         # check to save sample, only do every 50 epochs
-        if args.checksample and ((e + 1) % 50 == 0 or e == 0):
+        if args.checksample and ((e + 1) % 25 == 0 or e == 0):
             with torch.no_grad():
                 learned = modelSR(test_images.to(device))
 
@@ -306,8 +306,8 @@ if __name__=="__main__":
             test_images = dataset[1][0].unsqueeze(0)
             test_names = [dataset.at(1).lstrip(os.path.join(args.data, 'train_images_64x64'))]
     elif args.dataset == 'CXR8':
-        dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, crop_size=(128,128))
-        # dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, image_shape=(128,128))
+        # dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, crop_size=(128,128))
+        dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, image_shape=(128,128))
         if args.checksample:
             test_images = dataset[1][0].unsqueeze(0)
             test_names = [dataset.at(1).lstrip(args.data)]
