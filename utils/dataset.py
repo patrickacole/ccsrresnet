@@ -170,7 +170,8 @@ if __name__=="__main__":
     which = 'DeepLesion'
     if which == 'CXR8':
         datapath = os.path.expanduser("~/Projects/datasets/miniCXR8/images/")
-        dataset = CXR8Dataset(datapath, scale_factor=1, add_noise=True, crop_size=(96,96))
+        # dataset = CXR8Dataset(datapath, scale_factor=1, add_noise=True, crop_size=(96,96))
+        dataset = CXR8Dataset(datapath, scale_factor=1, add_noise=True)
         print(len(dataset))
         print(dataset.at(0))
 
@@ -191,6 +192,12 @@ if __name__=="__main__":
         axes[1].set_title('Xray')
         fig.tight_layout()
         plt.show()
+
+        # save images
+        # noise = Image.fromarray((255 * imageLR).astype(np.uint8))
+        # noise.save('noise.png')
+        # normal = Image.fromarray((255 * imageHR).astype(np.uint8))
+        # normal.save('normal.png')
     elif which == 'Noisy':
         datapath = os.path.expanduser("~/Projects/datasets/xray_images/")
         dataset = NoisyXrayDataset(datapath, train=False)
