@@ -340,8 +340,8 @@ if __name__=="__main__":
             test_images = dataset[0][0].unsqueeze(0)
             test_names = [dataset.at(0).lstrip(os.path.join(args.data, 'train_images_64x64'))]
     elif args.dataset == 'CXR8':
-        dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, crop_size=(128,128))
-        # dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, image_shape=(128,128))
+        # dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, crop_size=(128,128))
+        dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, image_shape=(128,128))
         if args.checksample:
             test_images = dataset[0][0].unsqueeze(0)
             test_names = [dataset.at(0).lstrip(args.data)]

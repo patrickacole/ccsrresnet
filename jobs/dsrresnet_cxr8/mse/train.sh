@@ -29,4 +29,4 @@ fi
 # Data is ready now run python file
 cd ~/Projects/freq-sr/
 echo "Running python script now"
-python train_dsrresnet.py --data /data/pacole2/miniCXR8/images --dataset CXR8 --upscale 1 --content_loss mse --checkpointdir checkpoints/dsrresnet_cxr8/mse2/ --checksample --wlmbda 2e-3
+python train_dsrresnet.py --data /data/pacole2/miniCXR8/images --dataset CXR8 --upscale 1 --content_loss mse --checkpointdir checkpoints/dsrresnet_cxr8/mse/ --checksample --wlmbda 2e-3
