@@ -25,9 +25,9 @@ class Residual_Block(nn.Module):
         output = torch.add(output,identity_data)
         return output
 
-class SRResNet(nn.Module):
+class CCSRResNet(nn.Module):
     def __init__(self, nc=3, upscale=4):
-        super(SRResNet, self).__init__()
+        super(CCSRResNet, self).__init__()
 
         self.conv_input = CoordConv(in_channels=nc, out_channels=64, with_r=True, kernel_size=9, stride=1, padding=4, bias=True)
         self.relu = nn.LeakyReLU(0.2, inplace=True)
@@ -131,7 +131,7 @@ class Discriminator(nn.Module):
 
 
 if __name__=="__main__":
-    model = SRResNet(nc=1, upscale=2)
+    model = CCSRResNet(nc=1, upscale=2)
     x = torch.zeros((4, 1, 64, 64))
     y = model(x)
     print(y.shape)
