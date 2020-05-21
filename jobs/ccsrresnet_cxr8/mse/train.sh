@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Not sure what this does?
-# nvidia-smi
+nvidia-smi
 
 # Activate desired environment
 # Need to source bashrc for some reason
@@ -29,4 +29,4 @@ fi
 # Data is ready now run python file
 cd ~/Projects/freq-sr/
 echo "Running python script now"
-python train_srresnet.py --data /data/pacole2/miniCXR8/images --dataset CXR8 --upscale 1 --content_loss mse --checkpointdir checkpoints/srresnet_cxr8/mse2/ --checksample --wlmbda 1e-3
+python train_srresnet.py --data /data/pacole2/miniCXR8/images --dataset CXR8 --upscale 1 --content_loss mse --checkpointdir checkpoints/ccsrresnet_cxr8/mse/ --checksample --wlmbda 1e-3
