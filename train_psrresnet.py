@@ -93,9 +93,19 @@ def psnr(learned, real):
     psnr = 10.0 * torch.log10(1.0 / mse)
     return psnr
 
-def wdist(fake_feats, real_feats):
-    z = (real_feats - fake_feats).view(-1)
-    n = fake_feats.size(0)
+def wdist(fake_feats, real_feats, nprojections=10000):
+    if len(fake_feats.shape) > 2:
+        fake_feats = fake_feats.view(fake_feats.size(0), -1)
+        real_feats = real_feats.view(real_feats.size(0), -1)
+
+    dim = fake_feats.size(1)
+    theta = torch.randn((dim, nprojections), requires_grad=False, device=device)
+    theta = theta/torch.norm(theta, dim=0)[None, :]
+    fake_projs = fake_feats @ theta
+    real_projs = real_feats @ theta
+
+    z = (real_projs - fake_projs).view(-1)
+    n = fake_projs.size(0)
     return torch.dot(z, z) / n
 
 def train(modelSR, modelD, dataloader):
@@ -184,7 +194,7 @@ def train(modelSR, modelD, dataloader):
             ##################################
             # train super resolution network
             ##################################
-            if (i + 1) % args.sr_index == 0:
+            if (e + 1) % args.sr_index == 0:
                 for param in modelD.parameters():
                     param.requires_grad_(False)
 
@@ -197,19 +207,22 @@ def train(modelSR, modelD, dataloader):
                 real_data = imageHR
 
                 ## features from discriminator
-                _, fake_feats = modelD(fake_data, feats=True)
-                _, real_feats = modelD(real_data, feats=True)
+                fake_label, fake_feats = modelD(fake_data, feats=True)
+                # _, real_feats = modelD(real_data, feats=True)
 
                 ## calculate content loss
                 content_loss = None
                 if args.content_loss == 'mse' or args.content_loss == 'abs' or args.content_loss == 'wdist':
-                    content_loss = criterion(fake_feats, real_feats.detach())
+                    content_loss = criterion(fake_data, real_data) # criterion(fake_feats, real_feats.detach())
                 elif args.content_loss == 'None':
                     content_loss = torch.tensor(0.0).to(device)
                 avg_content_loss += content_loss.item()
 
+                ## calculate wasserstein loss
+                wasserstein_loss = -fake_label.mean()
+
                 ## calculate gradient
-                sr_loss = content_loss
+                sr_loss = args.clmbda * content_loss + args.wlmbda * wasserstein_loss
                 sr_loss.backward()
 
                 ## update parameters
@@ -220,7 +233,7 @@ def train(modelSR, modelD, dataloader):
                 avg_psnr += learned_psnr.mean().item()
 
                 ## remove variables to release some memory on gpu
-                del sr_loss, content_loss, fake_data, real_data, fake_feats, real_feats
+                del sr_loss, content_loss, wasserstein_loss, fake_data, real_data, fake_feats, fake_label #real_feats
             del imageLR, imageHR
 
             ## print status of training
@@ -229,7 +242,7 @@ def train(modelSR, modelD, dataloader):
                       "Gradient Penalty: {:.4f},".format(avg_gradient_penalty / (i + 1)),
                       "D Fake Loss: {:.4f},".format(avg_fake_d_loss / (i + 1)),
                       "D Real Loss: {:.4f},".format(avg_real_d_loss / (i + 1)),
-                      "P Loss: {:.4f},".format(avg_content_loss / ((i + 1) / args.sr_index)),
+                      "P Loss: {:.4f},".format(avg_content_loss / (i + 1)),
                       "PSNR: {:.2f}".format(avg_psnr / (i + 1)))
 
         # take a step with the lr schedulers
@@ -241,7 +254,7 @@ def train(modelSR, modelD, dataloader):
               "Gradient Penalty: {:.4f},".format(avg_gradient_penalty / len(dataloader)),
               "D Fake Loss: {:.4f},".format(avg_fake_d_loss / len(dataloader)),
               "D Real Loss: {:.4f},".format(avg_real_d_loss / len(dataloader)),
-              "P Loss: {:.4f},".format(avg_content_loss / (len(dataloader) / args.sr_index)),
+              "P Loss: {:.4f},".format(avg_content_loss / len(dataloader)),
               "PSNR: {:.2f}".format(avg_psnr / len(dataloader)))
 
         # check to save sample, only do every 50 epochs
@@ -303,19 +316,19 @@ if __name__=="__main__":
     if args.dataset == 'xray_images':
         dataset = NoisyXrayDataset(args.data)
         if args.checksample:
-            test_images = dataset[1][0].unsqueeze(0)
-            test_names = [dataset.at(1).lstrip(os.path.join(args.data, 'train_images_64x64'))]
+            test_images = dataset[3][0].unsqueeze(0)
+            test_names = [dataset.at(3).lstrip(os.path.join(args.data, 'train_images_64x64'))]
     elif args.dataset == 'CXR8':
         # dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, crop_size=(128,128))
         dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, image_shape=(128,128))
         if args.checksample:
-            test_images = dataset[1][0].unsqueeze(0)
-            test_names = [dataset.at(1).lstrip(args.data)]
+            test_images = dataset[3][0].unsqueeze(0)
+            test_names = [dataset.at(3).lstrip(args.data)]
     elif args.dataset == 'DeepLesion':
         dataset = DeepLesionDataset(args.data, preprocessed=True)
         if args.checksample:
-            test_images = dataset[1][0].unsqueeze(0)
-            test_names = ['_'.join(dataset.at(1).lstrip(args.data).split('/'))]
+            test_images = dataset[3][0].unsqueeze(0)
+            test_names = ['_'.join(dataset.at(3).lstrip(args.data).split('/'))]
 
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
