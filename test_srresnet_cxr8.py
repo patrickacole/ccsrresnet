@@ -142,7 +142,8 @@ if __name__=="__main__":
     print("")
 
     # dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True)
-    dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, image_shape=(128,128))
+    # dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, crop_size=(128,128))
+    dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, image_shape=(256,256))
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=False, num_workers=8)
 

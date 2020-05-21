@@ -58,7 +58,7 @@ for i, sample in enumerate(samples, 1):
 
     ## create a mask to randomly reduce frequency of some angles
     mask = np.random.binomial(1, 0.98, sino.shape)
-    nsino = np.random.poisson(sino * mask / 2)
+    nsino = np.random.poisson((sino * mask + sino) / 2)
 
     ## create noisy image
     with warnings.catch_warnings():
@@ -68,10 +68,10 @@ for i, sample in enumerate(samples, 1):
     noise = noise - noise[0, 0]
     ### put in range 0-255 and linear interpolate between original and radon noise one
     noise = (255 * ((noise - noise.min()) / (noise.max() - noise.min())))
-    noise = 1.0 * image + 0.333 * noise
+    noise = 0.667 * image + 0.333 * noise
     ### put in range 0-255 and then linear interpolate between poisson of radon noise and radon noise
     noise = (255 * ((noise - noise.min()) / (noise.max() - noise.min()))).astype(np.uint8)
-    noise = 0.666 * noise + 0.333 * (np.random.poisson(noise) / 255.0)
+    noise = 0.667 * noise + 0.333 * (np.random.poisson(noise) / 255.0)
 
     # save input noise image
     savepath = samplepath.replace('Images_png', 'noiseStudies').rstrip(os.path.basename(samplepath))
