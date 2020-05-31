@@ -40,21 +40,6 @@ class LambdaLR():
     def step(self, epoch):
         return 1.0 - max(0, epoch + self.offset - self.decay_start_epoch) / (self.n_epochs - self.decay_start_epoch)
 
-class MixedLoss():
-    def __init__(self, n_epochs):
-        self.n_epochs = n_epochs
-        self.mse = nn.MSELoss()
-        self.fht2d = FHT2D((M,N))
-        self.wl2 = weightedEuclideanLoss
-
-    def __call__(self, learned, real, epoch):
-        alpha = 1.0 - epoch / self.n_epochs
-        beta = 1.0 - alpha
-
-        mse_loss = self.mse(learned, real)
-        wl2_loss = self.wl2(self.fht2d(learned), self.fht2d(real))
-        return alpha * mse_loss + beta * wl2_loss
-
 def args_parse():
     """
     Returns command line parsed arguments
@@ -74,6 +59,8 @@ def args_parse():
     parser.add_argument('--wlmbda', default=1e-3, type=float, help="Weight of wasserstein loss")
     parser.add_argument('--checksample', default=False, action='store_true', help="Whether to save an image intermediately throughout training")
     parser.add_argument('--checkpointdir', default="checkpoints/ccsrresnet/", help="Path to checkpoint directory")
+    parser.add_argument('--load', default=False, action='store_true', help="Whether to load from a previous checkpoint file")
+    parser.add_argument('--prefix', default="last", help="Prefix for checkpoint file")
     return parser.parse_args()
 
 def calc_gradient_penalty(modelD, real_data, fake_data, lmbda=10):
@@ -107,30 +94,11 @@ def psnr(learned, real):
     psnr = 10.0 * torch.log10(1.0 / mse)
     return psnr
 
-def weightedEuclideanLoss(learned, real, a=1.0, b=1.0):
-    # get number of channels
-    c = learned.size(1)
-
-    # construct weighted matrix
-    # this matrix puts an emphasis on the corners of the image
-    m = (torch.abs(M / 2 - torch.arange(M)[:,None]) / (M / 2)) ** 2
-    n = (torch.abs(N / 2 - torch.arange(N)[None,:]) / (N / 2)) ** 2
-    w = torch.exp(a * m + b * n).to(device)
-
-    # take the 2 norm of the flattened image
-    # this is equivalent to taking the frobenius norm of the image matrix
-    d = w[None,None,:] * (learned - real)
-    d = d.view(-1, c * M * N)
-    l = 0.5 * torch.norm(d, p=2, dim=1)
-
-    # return the mean over the given samples
-    return torch.mean(l)
-
-def train(modelSR, modelD, dataloader):
+def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
     # set optimizers
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
-    optimizerSR = optim.Adam(modelSR.parameters(), lr=args.lr, betas=(0.9, 0.999))
-    optimizerD  = optim.Adam(modelD.parameters(), lr=args.lr, betas=(0.9, 0.999))
+    # optimizerSR = optim.Adam(modelSR.parameters(), lr=args.lr, betas=(0.9, 0.999))
+    # optimizerD  = optim.Adam(modelD.parameters(), lr=args.lr, betas=(0.9, 0.999))
 
     # set learning rate scheduler
     # lrscheduler = optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.2)
@@ -144,18 +112,13 @@ def train(modelSR, modelD, dataloader):
         criterion = nn.MSELoss()
     elif args.content_loss == 'abs':
         criterion = nn.L1Loss()
-    elif args.content_loss == 'wl2':
-        criterion = weightedEuclideanLoss
-        fht2d = FHT2D((M,N))
-    elif args.content_loss == 'mix':
-        criterion = MixedLoss(args.epochs)
     elif args.content_loss != 'None':
         raise NotImplementedError('The loss provided has not been implemented yet')
 
     # calculate when to print each epoch
     print_idx = len(dataloader) // args.num_epoch_prints
 
-    for e in range(args.epochs):
+    for e in range(start_epoch, args.epochs):
         print("Epoch [{} / {}]".format(e + 1, args.epochs))
 
         # keep track of the avg loss values
@@ -233,10 +196,6 @@ def train(modelSR, modelD, dataloader):
             content_loss = None
             if args.content_loss == 'mse' or args.content_loss == 'abs':
                 content_loss = criterion(fake_data, imageHR)
-            elif args.content_loss == 'wl2':
-                content_loss = criterion(fht2d(fake_data), fht2d(imageHR))
-            elif args.content_loss == 'mix':
-                content_loss = criterion(fake_data, imageHR, e)
             elif args.content_loss == 'None':
                 content_loss = torch.tensor(0.0).to(device)
             avg_content_loss += content_loss.item()
@@ -331,6 +290,8 @@ if __name__=="__main__":
     print("WLambda:              " + str(args.wlmbda))
     print("Check Sample:         " + str(args.checksample))
     print("Checkpoint directory: " + args.checkpointdir)
+    print("Load:                 " + str(args.load))
+    print("Prefix:               " + args.prefix)
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
 
@@ -361,12 +322,24 @@ if __name__=="__main__":
         modelD  = Discriminator(nc=1, nlayers=5)
     else:
         modelD = Discriminator(nc=1)
+
+    optimizerSR = optim.Adam(modelSR.parameters(), lr=args.lr, betas=(0.9, 0.999))
+    optimizerD  = optim.Adam(modelD.parameters(), lr=args.lr, betas=(0.9, 0.999))
+    start_epoch = 0
+
+    if args.load:
+        load_checkpoint(os.path.join(args.checkpointdir, 'super_resolution'),
+                        args.prefix, modelSR, optimizer=optimizerSR)
+        start_epoch = load_checkpoint(os.path.join(args.checkpointdir, "discriminator"),
+                        args.prefix, modelD, optimizer=optimizerD)['epoch']
+
     if (torch.cuda.device_count() > 1):
         device_ids = list(range(torch.cuda.device_count()))
         print("GPU devices being used: ", device_ids)
         modelSR = nn.DataParallel(modelSR, device_ids=device_ids)
         modelD  = nn.DataParallel(modelD, device_ids=device_ids)
+
     modelSR.to(device)
     modelD.to(device)
 
-    train(modelSR, modelD, dataloader)
+    train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch)
