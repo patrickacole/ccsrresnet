@@ -22,7 +22,7 @@ from model.CCSRResNet import *
 
 
 # global variables
-M, N = (128, 128)
+M, N = (256, 256)
 device = None
 args = None
 test_images = None
@@ -68,7 +68,7 @@ def args_parse():
     parser.add_argument('--epochs', default=300, type=int, help="Number of epochs to train")
     parser.add_argument('--num_epoch_prints', default=10, type=int, help="Number of times to print each epoch")
     parser.add_argument('--start_decay', default=250, type=int, help="Epoch to start decaying the learning rate")
-    parser.add_argument('--batch', default=64, type=int, help="Batch size to use while training")
+    parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
     parser.add_argument('--content_loss', default="mse", help="Content loss can currently be wl2, mse, mix, abs, or None")
     parser.add_argument('--clmbda', default=1.0, type=float, help="Weight of content loss")
     parser.add_argument('--wlmbda', default=1e-3, type=float, help="Weight of wasserstein loss")
@@ -358,7 +358,7 @@ if __name__=="__main__":
 
     modelSR = CCSRResNet(nc=1, upscale=args.upscale)
     if args.dataset == 'CXR8' or args.dataset == 'DeepLesion':
-        modelD  = Discriminator(nc=1, nlayers=4)
+        modelD  = Discriminator(nc=1, nlayers=5)
     else:
         modelD = Discriminator(nc=1)
     if (torch.cuda.device_count() > 1):

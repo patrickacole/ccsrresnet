@@ -32,7 +32,7 @@ class CCSRResNet(nn.Module):
         self.conv_input = CoordConv(in_channels=nc, out_channels=64, with_r=True, kernel_size=9, stride=1, padding=4, bias=True)
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
-        self.residual = self.make_layer(Residual_Block, 16)
+        self.residual = self.make_layer(Residual_Block, 12)
 
         self.conv_mid = CoordConv(in_channels=64, out_channels=64, with_r=True, kernel_size=3, stride=1, padding=1, bias=True)
         self.bn_mid = nn.InstanceNorm2d(64, affine=True)
@@ -131,12 +131,12 @@ class Discriminator(nn.Module):
 
 
 if __name__=="__main__":
-    model = CCSRResNet(nc=1, upscale=2)
-    x = torch.zeros((4, 1, 64, 64))
+    model = CCSRResNet(nc=1, upscale=1)
+    x = torch.zeros((4, 1, 256, 256))
     y = model(x)
     print(y.shape)
 
-    discriminator = Discriminator(nc=1, nlayers=4)
+    discriminator = Discriminator(nc=1, nlayers=5)
     z = discriminator(y)
     print(z.shape)
 
