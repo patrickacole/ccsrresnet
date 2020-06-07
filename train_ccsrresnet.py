@@ -330,8 +330,19 @@ if __name__=="__main__":
     if args.load:
         load_checkpoint(os.path.join(args.checkpointdir, 'super_resolution'),
                         args.prefix, modelSR, optimizer=optimizerSR)
+
+        for state in optimizerSR.state.values():
+            for k, v in state.items():
+                if torch.is_tensor(v):
+                    state[k] = v.to(device)
+
         start_epoch = load_checkpoint(os.path.join(args.checkpointdir, "discriminator"),
                         args.prefix, modelD, optimizer=optimizerD)['epoch']
+
+        for state in optimizerD.state.values():
+            for k, v in state.items():
+                if torch.is_tensor(v):
+                    state[k] = v.to(device)
 
     if (torch.cuda.device_count() > 1):
         device_ids = list(range(torch.cuda.device_count()))
