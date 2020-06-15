@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Not sure what this does?
-# nvidia-smi
+nvidia-smi
 
 # Activate desired environment
 # Need to source bashrc for some reason

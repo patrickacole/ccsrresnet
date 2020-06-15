@@ -24,12 +24,8 @@ samples = []
 for d in studies:
     samples += [os.path.join(d, f) for f in os.listdir(os.path.join(datapath, d)) if '.png' in f]
 
-num_samples = len(samples)
 # go through all slices
 for i, sample in enumerate(samples, 1):
-    if i % int(0.1 * num_samples) == 0:
-        print('Completed preprocessing {:.2f}\% of data samples')
-
     samplepath = os.path.join(datapath, sample)
 
     # load image
@@ -88,5 +84,5 @@ for i, sample in enumerate(samples, 1):
     image.save(samplepath.replace('Images_png', 'noiseStudies'))
 
     # check if need to print
-    if i % 1000 == 0:
+    if i % 100 == 0:
         print("{} / {}".format(i, len(samples)))
