@@ -327,7 +327,7 @@ if __name__=="__main__":
     optimizerD  = optim.Adam(modelD.parameters(), lr=args.lr, betas=(0.9, 0.999))
     start_epoch = 0
 
-    if args.load:
+    if args.load and os.path.exists(os.path.join(args.checkpointdir, 'super_resolution', args.prefix + '.pth')):
         load_checkpoint(os.path.join(args.checkpointdir, 'super_resolution'),
                         args.prefix, modelSR, optimizer=optimizerSR)
 
