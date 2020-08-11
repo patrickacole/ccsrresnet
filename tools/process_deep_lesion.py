@@ -24,9 +24,12 @@ samples = []
 for d in studies:
     samples += [os.path.join(d, f) for f in os.listdir(os.path.join(datapath, d)) if '.png' in f]
 
+# list_we_care_about = ['004430_01_02/399.png', '004430_01_02/205.png', '004430_01_02/166.png', '004427_02_02/105.png']
 # go through all slices
 for i, sample in enumerate(samples, 1):
     samplepath = os.path.join(datapath, sample)
+    # if sample not in list_we_care_about:
+    #     continue
 
     # load image
     image = np.asarray(Image.open(samplepath), dtype=np.int32) - 32768
@@ -57,7 +60,7 @@ for i, sample in enumerate(samples, 1):
         sino = radon(image, theta=theta, circle=True)
 
     ## create a mask to randomly reduce frequency of some angles
-    mask = np.random.binomial(1, 0.98, sino.shape)
+    mask = np.random.binomial(1, 0.95, sino.shape)
     nsino = np.random.poisson((sino * mask + sino) / 2)
 
     ## create noisy image

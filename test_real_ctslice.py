@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 
 # custom imports
 from utils.checkpoints import *
+from model.CCSRResNet import *
 from model.SRResNet import *
 
 
@@ -23,7 +24,7 @@ def args_parse():
     """
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('sample', help="Path to sample to test")
-    parser.add_argument('--checkpointdir', default="checkpoints/srresnet_dl/mse/", help="Path to checkpoint directory")
+    parser.add_argument('--checkpointdir', default="checkpoints/ccsrresnet_dl/mse/", help="Path to checkpoint directory")
     return parser.parse_args()
 
 
@@ -31,7 +32,7 @@ if __name__=="__main__":
     args = args_parse()
 
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
-    modelSR = SRResNet(nc=1, upscale=1)
+    modelSR = CCSRResNet(nc=1, upscale=1)
 
     # load from checkpoint files
     load_checkpoint(os.path.join(args.checkpointdir, 'super_resolution'), 'last', modelSR)
