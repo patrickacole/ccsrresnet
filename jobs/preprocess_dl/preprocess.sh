@@ -35,7 +35,7 @@ fi
 # Preprocess data
 cd ~/Projects/freq-sr/tools/
 echo "Preprocessing data..."
-python process_deep_lesion.py /data/pacole2/DeepLesion/ --image_size 256 256
+python -u process_deep_lesion.py /data/pacole2/DeepLesion/ --image_size 256 256
 
 # Move data
 cd /data/pacole2/DeepLesion/
