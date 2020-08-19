@@ -34,11 +34,27 @@ def args_parse():
     parser.add_argument('--checkpointdir', default="checkpoints/ccsrresnet/", help="Path to checkpoint directory")
     return parser.parse_args()
 
-def calc_psnr(learned, real):
-    learned = torch.clamp(learned, min=0, max=1)
-    mse = ((learned - real) ** 2).view(real.size(0), -1).mean(dim=-1)
-    psnr = 10.0 * torch.log10(1.0 / mse)
-    return psnr
+# def calc_psnr(learned, real):
+#     learned = torch.clamp(learned, min=0, max=1)
+#     mse = ((learned - real) ** 2).view(real.size(0), -1).mean(dim=-1)
+#     psnr = 10.0 * torch.log10(1.0 / mse)
+#     return psnr
+
+def calc_psnr(learned, real, data_range=1.0):
+    learned = learned.data.cpu().numpy().astype(np.float32)
+    real = real.data.cpu().numpy().astype(np.float32)
+    psnr = 0
+    for i in range(learned.shape[0]):
+        psnr += compare_psnr(real[i,:,:,:], learned[i,:,:,:], data_range=data_range)
+    return (psnr / learned.shape[0])
+
+def calc_ssim(img, imclean, data_range=1.0):
+    learned = learned.data.cpu().numpy().astype(np.float32)
+    real = real.data.cpu().numpy().astype(np.float32)
+    ssim = 0
+    for i in range(learned.shape[0]):
+        ssim += compare_ssim(real[i,:,:,:], learned[i,:,:,:], data_range=data_range)
+    return (ssim / learned.shape[0])
 
 def calc_rsme(learned, real):
     learned = torch.clamp(learned, min=0, max=1)
