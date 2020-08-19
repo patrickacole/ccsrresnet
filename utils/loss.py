@@ -131,7 +131,12 @@ class PerceptualLoss():
         self.mse = nn.MSELoss()
 
     def __call__(self, learned, real):
+        if learned.size(1) == 1:
+            learned = learned.repeat(1, 3, 1, 1)
         _, learned_feats = self.vgg(learned, extract_feats=self.extract_feats)
+
+        if real.size(1) == 1:
+            real = real.repeat(1, 3, 1, 1)
         _, real_feats = self.vgg(real, extract_feats=self.extract_feats)
 
         loss = 0.0
