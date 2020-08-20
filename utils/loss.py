@@ -127,7 +127,7 @@ def vgg19_bn(pretrained=False, progress=True, **kwargs):
 class PerceptualLoss():
     def __init__(self, extract_feats=['conv5_4']):
         self.extract_feats = extract_feats
-        self.vgg = vgg19(pretrained=True)
+        self.vgg = vgg19(pretrained=True).cuda()
         self.mse = nn.MSELoss()
 
     def __call__(self, learned, real):

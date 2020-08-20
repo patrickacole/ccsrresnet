@@ -24,7 +24,7 @@ class WGAN_VGG(nn.Module):
         return torch.sigmoid(out)
 
 class Discriminator(nn.Module):
-    def __init__(self, nc=3, nlayers=4):
+    def __init__(self, nc=1, nlayers=4):
         super(Discriminator, self).__init__()
 
         features = []
@@ -52,7 +52,7 @@ class Discriminator(nn.Module):
         x = self.LeakyReLU(x)
         x = self.fc2(x)
         # out = self.sigmoid(out)
-        return torch.sigmoid(x.view(-1, 1).squeeze(1))
+        return x.view(-1, 1).squeeze(1)
 
 
 if __name__=="__main__":

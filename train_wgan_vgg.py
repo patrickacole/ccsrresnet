@@ -13,6 +13,8 @@ from PIL import Image
 from argparse import ArgumentParser
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from skimage.metrics import peak_signal_noise_ratio as compare_psnr
+from skimage.metrics import structural_similarity as compare_ssim
 
 # custom imports
 from utils.dataset_wgan_vgg import *
@@ -102,12 +104,12 @@ def calc_psnr(learned, real, data_range=1.0):
         psnr += compare_psnr(real[i,:,:,:], learned[i,:,:,:], data_range=data_range)
     return (psnr / learned.shape[0])
 
-def calc_ssim(img, imclean, data_range=1.0):
+def calc_ssim(learned, real, data_range=1.0):
     learned = learned.data.cpu().numpy().astype(np.float32)
     real = real.data.cpu().numpy().astype(np.float32)
     ssim = 0
     for i in range(learned.shape[0]):
-        ssim += compare_ssim(real[i,:,:,:], learned[i,:,:,:], data_range=data_range)
+        ssim += compare_ssim(real[i,0,:,:], learned[i,0,:,:], data_range=data_range)
     return (ssim / learned.shape[0])
 
 def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
@@ -134,7 +136,7 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
         raise NotImplementedError('The loss provided has not been implemented yet')
 
     # calculate when to print each epoch
-    print_idx = 8 # len(dataloader) // args.num_epoch_prints
+    print_idx = 16 # len(dataloader) // args.num_epoch_prints
 
     for e in range(start_epoch, args.epochs):
         print("Epoch [{} / {}]".format(e + 1, args.epochs))
@@ -198,7 +200,7 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
             ##################################
             # train super resolution network
             ##################################
-            if (i + 1) % 4 == 0:
+            if (i + 1) % 2 == 0:
                 for param in modelD.parameters():
                     param.requires_grad_(False)
 
@@ -214,7 +216,7 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
 
                 ## calculate content loss
                 content_loss = None
-                if args.content_loss == 'mse' or args.content_loss == 'abs':
+                if args.content_loss == 'mse' or args.content_loss == 'abs' or args.content_loss == 'vgg':
                     content_loss = criterion(fake_data, imageHR)
                 elif args.content_loss == 'None':
                     content_loss = torch.tensor(0.0).to(device)
@@ -243,10 +245,10 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
                       "Gradient Penalty: {:.4f},".format(avg_gradient_penalty / (i + 1)),
                       "D Fake Loss: {:.4f},".format(avg_fake_d_loss / (i + 1)),
                       "D Real Loss: {:.4f},".format(avg_real_d_loss / (i + 1)),
-                      "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / ((i + 1) / 4)),
-                      "Content Loss: {:.4f},".format(avg_content_loss / ((i + 1) / 4)),
-                      "PSNR: {:.2f}".format(avg_psnr / ((i + 1) / 4)),
-                      "SSIM: {:.2f}".format(avg_ssim / ((i + 1) / 4)))
+                      "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / ((i + 1) / 2)),
+                      "Content Loss: {:.4f},".format(avg_content_loss / ((i + 1) / 2)),
+                      "PSNR: {:.2f}".format(avg_psnr / ((i + 1) / 2)),
+                      "SSIM: {:.2f}".format(avg_ssim / ((i + 1) / 2)))
 
         # take a step with the lr schedulers
         lrschedulerSR.step()
@@ -257,10 +259,10 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
               "Gradient Penalty: {:.4f},".format(avg_gradient_penalty / len(dataloader)),
               "D Fake Loss: {:.4f},".format(avg_fake_d_loss / len(dataloader)),
               "D Real Loss: {:.4f},".format(avg_real_d_loss / len(dataloader)),
-              "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / (len(dataloader) / 4)),
-              "Content Loss: {:.4f},".format(avg_content_loss / (len(dataloader) / 4)),
-              "PSNR: {:.2f}".format(avg_psnr / (len(dataloader) / 4)),
-              "SSIM: {:.2f}".format(avg_ssim / (len(dataloader) / 4)))
+              "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / (len(dataloader) / 2)),
+              "Content Loss: {:.4f},".format(avg_content_loss / (len(dataloader) / 2)),
+              "PSNR: {:.2f}".format(avg_psnr / (len(dataloader) / 2)),
+              "SSIM: {:.2f}".format(avg_ssim / (len(dataloader) / 2)))
 
         # check to save sample, only do every 50 epochs
         if args.checksample and ((e + 1) % 50 == 0 or e == 0):
