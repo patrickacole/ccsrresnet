@@ -60,6 +60,7 @@ def args_parse():
     parser.add_argument('--checksample', default=False, action='store_true', help="Whether to save an image intermediately throughout training")
     parser.add_argument('--checkpointdir', default="checkpoints/ccsrresnet/", help="Path to checkpoint directory")
     parser.add_argument('--load', default=False, action='store_true', help="Whether to load from a previous checkpoint file")
+    parser.add_argument('--retrain', default=False, action='store_true', help="Whether to retrain model, will start at epoch 0 and use weights from previous session")
     parser.add_argument('--prefix', default="last", help="Prefix for checkpoint file")
     return parser.parse_args()
 
@@ -88,11 +89,27 @@ def calc_gradient_penalty(modelD, real_data, fake_data, lmbda=10):
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * lmbda
     return gradient_penalty
 
-def psnr(learned, real):
-    learned = torch.clamp(learned, min=0, max=1)
-    mse = ((learned - real) ** 2).view(real.size(0), -1).mean(dim=-1)
-    psnr = 10.0 * torch.log10(1.0 / mse)
-    return psnr
+# def psnr(learned, real):
+#     learned = torch.clamp(learned, min=0, max=1)
+#     mse = ((learned - real) ** 2).view(real.size(0), -1).mean(dim=-1)
+#     psnr = 10.0 * torch.log10(1.0 / mse)
+#     return psnr
+
+def calc_psnr(learned, real, data_range=1.0):
+    learned = learned.data.cpu().numpy().astype(np.float32)
+    real = real.data.cpu().numpy().astype(np.float32)
+    psnr = 0
+    for i in range(learned.shape[0]):
+        psnr += compare_psnr(real[i,:,:,:], learned[i,:,:,:], data_range=data_range)
+    return (psnr / learned.shape[0])
+
+def calc_ssim(learned, real, data_range=1.0):
+    learned = learned.data.cpu().numpy().astype(np.float32)
+    real = real.data.cpu().numpy().astype(np.float32)
+    ssim = 0
+    for i in range(learned.shape[0]):
+        ssim += compare_ssim(real[i,0,:,:], learned[i,0,:,:], data_range=data_range)
+    return (ssim / learned.shape[0])
 
 def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
     # set optimizers
@@ -130,6 +147,7 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
 
         # keep track of the average psnr
         avg_psnr = 0.0
+        avg_ssim = 0.0
 
         # total number of images
         total_images = 0
@@ -208,8 +226,10 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
             optimizerSR.step()
 
             ## calculate psnr
-            learned_psnr = psnr(fake_data, imageHR)
+            learned_psnr = calc_psnr(fake_data, imageHR)
             avg_psnr += learned_psnr.mean().item()
+            learned_ssim = calc_ssim(fake_data, imageHR)
+            avg_ssim += learned_ssim.mean().item()
 
             ## remove variables to release some memory on gpu
             del sr_loss, content_loss, wassertein_loss, fake_data
@@ -223,7 +243,8 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
                       "D Real Loss: {:.4f},".format(avg_real_d_loss / (i + 1)),
                       "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / (i + 1)),
                       "Content Loss: {:.4f},".format(avg_content_loss / (i + 1)),
-                      "PSNR: {:.2f}".format(avg_psnr / (i + 1)))
+                      "PSNR: {:.2f}".format(avg_psnr / (i + 1)),
+                      "SSIM: {:.2f}".format(avg_ssim / (i + 1)))
 
         # take a step with the lr schedulers
         lrschedulerSR.step()
@@ -236,7 +257,8 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
               "D Real Loss: {:.4f},".format(avg_real_d_loss / len(dataloader)),
               "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / len(dataloader)),
               "Content Loss: {:.4f},".format(avg_content_loss / len(dataloader)),
-              "PSNR: {:.2f}".format(avg_psnr / len(dataloader)))
+              "PSNR: {:.2f}".format(avg_psnr / len(dataloader)),
+              "SSIM: {:.2f}".format(avg_ssim / len(dataloader)))
 
         # check to save sample, only do every 50 epochs
         if args.checksample and ((e + 1) % 50 == 0 or e == 0):
@@ -291,6 +313,7 @@ if __name__=="__main__":
     print("Check Sample:         " + str(args.checksample))
     print("Checkpoint directory: " + args.checkpointdir)
     print("Load:                 " + str(args.load))
+    print("Retrain:              " + str(args.retrain))
     print("Prefix:               " + args.prefix)
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
@@ -329,7 +352,7 @@ if __name__=="__main__":
 
     if args.load and os.path.exists(os.path.join(args.checkpointdir, 'super_resolution', args.prefix + '.pth')):
         load_checkpoint(os.path.join(args.checkpointdir, 'super_resolution'),
-                        args.prefix, modelSR, optimizer=optimizerSR)
+                        args.prefix, modelSR, optimizer=optimizerSR if not args.retrain else None)
 
         for state in optimizerSR.state.values():
             for k, v in state.items():
@@ -337,7 +360,7 @@ if __name__=="__main__":
                     state[k] = v.to(device)
 
         start_epoch = load_checkpoint(os.path.join(args.checkpointdir, "discriminator"),
-                        args.prefix, modelD, optimizer=optimizerD)['epoch']
+                        args.prefix, modelD, optimizer=optimizerD if not args.retrain else None)['epoch']
 
         for state in optimizerD.state.values():
             for k, v in state.items():
@@ -352,5 +375,8 @@ if __name__=="__main__":
 
     modelSR.to(device)
     modelD.to(device)
+
+    if args.retrain:
+        start_epoch = 0
 
     train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch)

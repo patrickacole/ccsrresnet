@@ -9,10 +9,12 @@ Log          = train.log
 Output       = train.out
 Error        = train.err
 # Use this to make sure 1 gpu is available. The key words are case insensitive.
-Request_gpus = 2
+# Request_gpus = 2
+Request_gpus = 4
 # Note: to use multiple CPUs instead of the default (one CPU), use request_cpus as well
 Request_cpus = 4
 # Require that it is not a K40 GPU
-requirements = (CUDADeviceName == "Quadro RTX 6000")
+# requirements = (CUDADeviceName == "Quadro RTX 6000")
+requirements = (CUDADeviceName != "Tesla K40m")
 # "Queue" means add the setup until this line to the queue.
 Queue
