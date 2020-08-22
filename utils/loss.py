@@ -130,13 +130,22 @@ class PerceptualLoss():
         self.vgg = vgg19(pretrained=True).cuda()
         self.mse = nn.MSELoss()
 
+        self.mean = torch.tensor([0.485, 0.456, 0.406]).view(1,3,1,1)
+        self.std = torch.tensor([0.229, 0.224, 0.225]).view(1,3,1,1)
+
     def __call__(self, learned, real):
         if learned.size(1) == 1:
             learned = learned.repeat(1, 3, 1, 1)
+        learned = (learned - self.mean) / self.std
+        if learned.size(-1) != 224:
+            learned = F.interpolate(learned, mode='bilinear', size=(224, 224), align_corners=False)
         _, learned_feats = self.vgg(learned, extract_feats=self.extract_feats)
 
         if real.size(1) == 1:
             real = real.repeat(1, 3, 1, 1)
+        real = (real - self.mean) / self.std
+        if real.size(-1) != 224:
+            real = F.interpolate(real, mode='bilinear', size=(224, 224), align_corners=False)
         _, real_feats = self.vgg(real, extract_feats=self.extract_feats)
 
         loss = 0.0

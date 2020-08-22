@@ -174,7 +174,7 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
 
             ## fake data
             with torch.no_grad():
-                fake_data = modelSR(imageLR)
+                fake_data = torch.clamp(modelSR(imageLR), 0., 1.)
             fake_label = modelD(fake_data)
             fake_d_loss = fake_label.mean()
             avg_fake_d_loss += fake_d_loss.item()
@@ -207,7 +207,7 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
                 optimizerSR.zero_grad()
 
                 ## generate fake data
-                fake_data = modelSR(imageLR)
+                fake_data = torch.clamp(modelSR(imageLR), 0., 1.)
 
                 ## calculate wasserstein loss
                 fake_label = modelD(fake_data)
@@ -267,7 +267,7 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
         # check to save sample, only do every 50 epochs
         if args.checksample and ((e + 1) % 50 == 0 or e == 0):
             with torch.no_grad():
-                learned = modelSR(test_images.to(device))
+                learned = torch.clamp(modelSR(test_images.to(device)), 0., 1.)
 
             # convert to numpy array
             learned = learned.cpu().data.numpy()
