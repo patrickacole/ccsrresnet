@@ -13,11 +13,12 @@ from PIL import Image
 from argparse import ArgumentParser
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from skimage.metrics import peak_signal_noise_ratio as compare_psnr
+from skimage.metrics import structural_similarity as compare_ssim
 
 # custom imports
 from utils.dataset import *
 from utils.checkpoints import *
-from utils.hartleytransform import *
 from model.CCSRResNet import *
 
 
