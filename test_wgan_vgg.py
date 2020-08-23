@@ -10,9 +10,9 @@ from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 from skimage.metrics import structural_similarity as compare_ssim
 
 # custom imports
-from utils.dataset import *
+from utils.dataset_wgan_vgg import *
 from utils.checkpoints import *
-from model.CCSRResNet import *
+from model.WGAN_VGG import *
 
 
 # global variables
@@ -32,8 +32,8 @@ def args_parse():
     parser.add_argument('--upscale', default=2, type=int, help="Amount to upscale by")
     parser.add_argument('--num_prints', default=8, type=int, help="Number of times in the testing loop")
     parser.add_argument('--metric', default="all", help="Metric to evaluate model on test data. psnr, ssim, rmse, or all")
-    parser.add_argument('--savedir', default="output/ccsrresnet-results/", help="Path to store generated super resolution files")
-    parser.add_argument('--checkpointdir', default="checkpoints/ccsrresnet/", help="Path to checkpoint directory")
+    parser.add_argument('--savedir', default="output/wgan_vgg-results/", help="Path to store generated super resolution files")
+    parser.add_argument('--checkpointdir', default="checkpoints/wgan_vgg/", help="Path to checkpoint directory")
     return parser.parse_args()
 
 # def calc_psnr(learned, real):
@@ -92,7 +92,7 @@ def test(modelSR, dataloader):
         imageHR = imageHR.to(device)
 
         with torch.no_grad():
-            learnedHR = modelSR(imageLR)
+            learnedHR = torch.clamp(modelSR(imageLR), 0., 1.)
 
         # save images
         for j in range(imageLR.size(0)):
@@ -155,7 +155,7 @@ def test(modelSR, dataloader):
             fptr.write('Model had an average psnr of {:.2f}, an average ssim of {:.2f}, and a sum rmse of {:.2f} on the test dataset'.format(avg_score[0], avg_score[1], avg_score[2] * total_images))
 
 if __name__=="__main__":
-    print("Beginning testing for CCSRResNet model...")
+    print("Beginning testing for WGAN-VGG model...")
     args = args_parse()
 
     print("Using the following hyperparemters:")
@@ -170,13 +170,13 @@ if __name__=="__main__":
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
 
-    dataset = DeepLesionDataset(args.data, preprocessed=True)
+    dataset = DeepLesionDataset(args.data, crop_size=None)
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=False, num_workers=8)
 
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
 
-    modelSR = CCSRResNet(nc=1, upscale=args.upscale)
+    modelSR = WGAN_VGG()
 
     # load from checkpoint files
     load_checkpoint(os.path.join(args.checkpointdir, 'super_resolution'), 'last', modelSR)
