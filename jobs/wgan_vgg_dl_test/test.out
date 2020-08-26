@@ -1,0 +1,72 @@
+Sun Aug 23 15:37:58 2020       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 450.36.06    Driver Version: 450.36.06    CUDA Version: 11.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  GeForce GTX TIT...  Off  | 00000000:04:00.0 Off |                  N/A |
+| 20%   34C    P0    68W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   1  GeForce GTX TIT...  Off  | 00000000:05:00.0 Off |                  N/A |
+| 19%   35C    P0    69W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   2  GeForce GTX TIT...  Off  | 00000000:08:00.0 Off |                  N/A |
+| 39%   79C    P2   198W / 250W |    948MiB / 12212MiB |     64%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   3  GeForce GTX TIT...  Off  | 00000000:09:00.0 Off |                  N/A |
+| 51%   83C    P2   201W / 250W |  11795MiB / 12212MiB |    100%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   4  GeForce GTX TIT...  Off  | 00000000:84:00.0 Off |                  N/A |
+| 19%   33C    P0    68W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   5  GeForce GTX TIT...  Off  | 00000000:85:00.0 Off |                  N/A |
+| 19%   31C    P0    67W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   6  GeForce GTX TIT...  Off  | 00000000:88:00.0 Off |                  N/A |
+| 18%   32C    P0    70W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   7  GeForce GTX TIT...  Off  | 00000000:89:00.0 Off |                  N/A |
+| 18%   35C    P0    69W / 250W |      0MiB / 12212MiB |      2%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|    2   N/A  N/A     10224      C   ...pyt-1-4-pl-073/bin/python      945MiB |
+|    3   N/A  N/A       665      C   ...a3/envs/eval_2/bin/python    11792MiB |
++-----------------------------------------------------------------------------+
+Running python script now
+Beginning testing for WGAN-VGG model...
+Using the following hyperparemters:
+Data:                 /data/pacole2/DeepLesionTestPreprocessed/miniStudies/
+Batch size:           1
+Batch break:          -1
+Upscale:              1
+Prints:               8
+Metric:               all
+Save directory:       output/wgan_vgg-results/
+Checkpoint directory: checkpoints/wgan_vgg/
+Cuda:                 1
+
+Beginning testing loop...
+===> Batch: [648 / 5187] Average psnr: 31.12 Average ssim: 0.84 Average rmse: 4859.32
+===> Batch: [1296 / 5187] Average psnr: 31.00 Average ssim: 0.85 Average rmse: 9797.72
+===> Batch: [1944 / 5187] Average psnr: 30.31 Average ssim: 0.84 Average rmse: 16242.06
+===> Batch: [2592 / 5187] Average psnr: 30.50 Average ssim: 0.84 Average rmse: 21200.77
+===> Batch: [3240 / 5187] Average psnr: 30.73 Average ssim: 0.84 Average rmse: 25731.73
+===> Batch: [3888 / 5187] Average psnr: 30.80 Average ssim: 0.84 Average rmse: 30635.45
+===> Batch: [4536 / 5187] Average psnr: 30.76 Average ssim: 0.84 Average rmse: 36019.59
+===> Batch: [5184 / 5187] Average psnr: 30.27 Average ssim: 0.84 Average rmse: 45226.60
+Model had an average psnr of 30.27, an average ssim of 0.84, and a sum rmse of 45243.21 on the test dataset

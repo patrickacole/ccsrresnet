@@ -29,4 +29,4 @@ fi
 # Data is ready now run python file
 cd ~/Projects/freq-sr/
 echo "Running python script now"
-python -u train_wgan_vgg.py --data /data/pacole2/DeepLesionPreprocessed/miniStudies/ --dataset DeepLesion --content_loss vgg --checkpointdir checkpoints/wgan_vgg/ --checksample --batch 128 --load
+python -u train_wgan_vgg.py --data /data/pacole2/DeepLesionPreprocessed/miniStudies/ --dataset DeepLesion --content_loss vgg --checkpointdir checkpoints/wgan_vgg/ --checksample --batch 64 --clmbda 1e4 --lr 1e-5

@@ -200,7 +200,7 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
             ##################################
             # train super resolution network
             ##################################
-            if (i + 1) % 2 == 0:
+            if (i + 1) % 1 == 0:
                 for param in modelD.parameters():
                     param.requires_grad_(False)
 
@@ -208,6 +208,8 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
 
                 ## generate fake data
                 fake_data = torch.clamp(modelSR(imageLR), 0., 1.)
+                if e < 5:
+                    print(fake_data.max().item(), fake_data.min().item())
 
                 ## calculate wasserstein loss
                 fake_label = modelD(fake_data)
@@ -245,10 +247,10 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
                       "Gradient Penalty: {:.4f},".format(avg_gradient_penalty / (i + 1)),
                       "D Fake Loss: {:.4f},".format(avg_fake_d_loss / (i + 1)),
                       "D Real Loss: {:.4f},".format(avg_real_d_loss / (i + 1)),
-                      "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / ((i + 1) / 2)),
-                      "Content Loss: {:.4f},".format(avg_content_loss / ((i + 1) / 2)),
-                      "PSNR: {:.2f}".format(avg_psnr / ((i + 1) / 2)),
-                      "SSIM: {:.2f}".format(avg_ssim / ((i + 1) / 2)))
+                      "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / ((i + 1) / 1)),
+                      "Content Loss: {:.4f},".format(avg_content_loss / ((i + 1) / 1)),
+                      "PSNR: {:.2f}".format(avg_psnr / ((i + 1) / 1)),
+                      "SSIM: {:.2f}".format(avg_ssim / ((i + 1) / 1)))
 
         # take a step with the lr schedulers
         lrschedulerSR.step()
@@ -259,13 +261,13 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
               "Gradient Penalty: {:.4f},".format(avg_gradient_penalty / len(dataloader)),
               "D Fake Loss: {:.4f},".format(avg_fake_d_loss / len(dataloader)),
               "D Real Loss: {:.4f},".format(avg_real_d_loss / len(dataloader)),
-              "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / (len(dataloader) / 2)),
-              "Content Loss: {:.4f},".format(avg_content_loss / (len(dataloader) / 2)),
-              "PSNR: {:.2f}".format(avg_psnr / (len(dataloader) / 2)),
-              "SSIM: {:.2f}".format(avg_ssim / (len(dataloader) / 2)))
+              "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / (len(dataloader) / 1)),
+              "Content Loss: {:.4f},".format(avg_content_loss / (len(dataloader) / 1)),
+              "PSNR: {:.2f}".format(avg_psnr / (len(dataloader) / 1)),
+              "SSIM: {:.2f}".format(avg_ssim / (len(dataloader) / 1)))
 
         # check to save sample, only do every 50 epochs
-        if args.checksample and ((e + 1) % 50 == 0 or e == 0):
+        if args.checksample and ((e + 1) % 5 == 0 or e == 0):
             with torch.no_grad():
                 learned = torch.clamp(modelSR(test_images.to(device)), 0., 1.)
 

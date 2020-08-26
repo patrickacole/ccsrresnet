@@ -15,13 +15,13 @@ class WGAN_VGG(nn.Module):
             nc = 32 if i > 0 else nc
             oc = 32 if i != 7 else 1
             layers += [nn.Conv2d(nc, oc, kernel_size=3, stride=1, padding=1, bias=True),
-                       nn.ReLU(inplace=True)]
+                      nn.ReLU(inplace=True)]
 
         self.model = nn.Sequential(*layers)
 
     def forward(self, x):
         out = self.model(x)
-        return torch.sigmoid(out)
+        return out
 
 class Discriminator(nn.Module):
     def __init__(self, nc=1, nlayers=4):

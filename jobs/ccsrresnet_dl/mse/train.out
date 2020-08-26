@@ -1,0 +1,145 @@
+Tue Aug 25 11:58:11 2020       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 450.36.06    Driver Version: 450.36.06    CUDA Version: 11.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  GeForce GTX TIT...  Off  | 00000000:04:00.0 Off |                  N/A |
+| 19%   44C    P0    70W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   1  GeForce GTX TIT...  Off  | 00000000:05:00.0 Off |                  N/A |
+| 40%   76C    P2    95W / 250W |  12161MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   2  GeForce GTX TIT...  Off  | 00000000:08:00.0 Off |                  N/A |
+| 18%   46C    P0    72W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   3  GeForce GTX TIT...  Off  | 00000000:09:00.0 Off |                  N/A |
+| 18%   44C    P0    72W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   4  GeForce GTX TIT...  Off  | 00000000:84:00.0 Off |                  N/A |
+| 18%   42C    P0    68W / 250W |      0MiB / 12212MiB |      2%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   5  GeForce GTX TIT...  Off  | 00000000:85:00.0 Off |                  N/A |
+| 36%   74C    P2   107W / 250W |  10557MiB / 12212MiB |     11%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   6  GeForce GTX TIT...  Off  | 00000000:88:00.0 Off |                  N/A |
+| 37%   74C    P2   112W / 250W |   9752MiB / 12212MiB |     19%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   7  GeForce GTX TIT...  Off  | 00000000:89:00.0 Off |                  N/A |
+| 44%   77C    P2   120W / 250W |  11716MiB / 12212MiB |     23%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|    1   N/A  N/A     11809      C   ...envs/detectron/bin/python    12158MiB |
+|    5   N/A  N/A     11810      C   ...envs/detectron/bin/python    10554MiB |
+|    6   N/A  N/A     11811      C   ...envs/detectron/bin/python     9749MiB |
+|    7   N/A  N/A     11812      C   ...envs/detectron/bin/python    11713MiB |
++-----------------------------------------------------------------------------+
+Running python script now
+Beginning training for CCSRResNet model...
+Using the following hyperparemters:
+Data:                 /data/pacole2/DeepLesionPreprocessed/miniStudies/
+Dataset:              DeepLesion
+Upscale:              1
+Learning rate:        0.0001
+Number of epochs:     50
+Prints per epoch:     10
+Start decay:          35
+Batch size:           32
+Content loss:         mse
+CLambda:              1.0
+WLambda:              0.001
+Check Sample:         True
+Checkpoint directory: checkpoints/ccsrresnet_dl/mse/
+Load:                 True
+Retrain:              False
+Prefix:               last
+Cuda:                 4
+
+GPU devices being used:  [0, 1, 2, 3]
+Epoch [45 / 50]
+===> Epoch [45 / 50]: Batch [105 / 1058]: Gradient Penalty: 0.0300, D Fake Loss: 99.5407, D Real Loss: 100.1352, Wasserstein Loss: -99.4786, Content Loss: 0.0002, PSNR: 38.46 SSIM: 0.95
+===> Epoch [45 / 50]: Batch [210 / 1058]: Gradient Penalty: 0.0313, D Fake Loss: 98.7623, D Real Loss: 99.3614, Wasserstein Loss: -98.6804, Content Loss: 0.0002, PSNR: 38.31 SSIM: 0.95
+===> Epoch [45 / 50]: Batch [315 / 1058]: Gradient Penalty: 0.0338, D Fake Loss: 98.4005, D Real Loss: 98.9985, Wasserstein Loss: -98.3673, Content Loss: 0.0002, PSNR: 38.08 SSIM: 0.95
+===> Epoch [45 / 50]: Batch [420 / 1058]: Gradient Penalty: 0.0340, D Fake Loss: 98.8454, D Real Loss: 99.4390, Wasserstein Loss: -98.8213, Content Loss: 0.0002, PSNR: 38.03 SSIM: 0.95
+===> Epoch [45 / 50]: Batch [525 / 1058]: Gradient Penalty: 0.0339, D Fake Loss: 98.4650, D Real Loss: 99.0538, Wasserstein Loss: -98.4605, Content Loss: 0.0002, PSNR: 37.94 SSIM: 0.95
+===> Epoch [45 / 50]: Batch [630 / 1058]: Gradient Penalty: 0.0339, D Fake Loss: 98.9833, D Real Loss: 99.5761, Wasserstein Loss: -98.9517, Content Loss: 0.0002, PSNR: 37.85 SSIM: 0.95
+===> Epoch [45 / 50]: Batch [735 / 1058]: Gradient Penalty: 0.0336, D Fake Loss: 99.8979, D Real Loss: 100.4910, Wasserstein Loss: -99.8673, Content Loss: 0.0002, PSNR: 37.92 SSIM: 0.95
+===> Epoch [45 / 50]: Batch [840 / 1058]: Gradient Penalty: 0.0334, D Fake Loss: 100.4257, D Real Loss: 101.0183, Wasserstein Loss: -100.3935, Content Loss: 0.0002, PSNR: 37.95 SSIM: 0.95
+===> Epoch [45 / 50]: Batch [945 / 1058]: Gradient Penalty: 0.0334, D Fake Loss: 100.8181, D Real Loss: 101.4128, Wasserstein Loss: -100.7876, Content Loss: 0.0002, PSNR: 37.98 SSIM: 0.95
+===> Epoch [45 / 50]: Batch [1050 / 1058]: Gradient Penalty: 0.0333, D Fake Loss: 101.2104, D Real Loss: 101.8063, Wasserstein Loss: -101.1806, Content Loss: 0.0002, PSNR: 38.03 SSIM: 0.95
+Epoch [45 / 50]: Gradient Penalty: 0.0333, D Fake Loss: 101.2349, D Real Loss: 101.8305, Wasserstein Loss: -101.2056, Content Loss: 0.0002, PSNR: 38.04 SSIM: 0.95
+Epoch [46 / 50]
+===> Epoch [46 / 50]: Batch [105 / 1058]: Gradient Penalty: 0.0319, D Fake Loss: 103.1292, D Real Loss: 103.7212, Wasserstein Loss: -103.1215, Content Loss: 0.0002, PSNR: 38.25 SSIM: 0.95
+===> Epoch [46 / 50]: Batch [210 / 1058]: Gradient Penalty: 0.0301, D Fake Loss: 103.0051, D Real Loss: 103.5946, Wasserstein Loss: -102.9849, Content Loss: 0.0002, PSNR: 38.32 SSIM: 0.95
+===> Epoch [46 / 50]: Batch [315 / 1058]: Gradient Penalty: 0.0322, D Fake Loss: 103.4641, D Real Loss: 104.0687, Wasserstein Loss: -103.4419, Content Loss: 0.0002, PSNR: 38.28 SSIM: 0.95
+===> Epoch [46 / 50]: Batch [420 / 1058]: Gradient Penalty: 0.0322, D Fake Loss: 103.1615, D Real Loss: 103.7674, Wasserstein Loss: -103.1350, Content Loss: 0.0002, PSNR: 38.27 SSIM: 0.95
+===> Epoch [46 / 50]: Batch [525 / 1058]: Gradient Penalty: 0.0319, D Fake Loss: 103.0869, D Real Loss: 103.6882, Wasserstein Loss: -103.0598, Content Loss: 0.0002, PSNR: 38.29 SSIM: 0.95
+===> Epoch [46 / 50]: Batch [630 / 1058]: Gradient Penalty: 0.0323, D Fake Loss: 103.1275, D Real Loss: 103.7316, Wasserstein Loss: -103.0956, Content Loss: 0.0002, PSNR: 38.28 SSIM: 0.95
+===> Epoch [46 / 50]: Batch [735 / 1058]: Gradient Penalty: 0.0322, D Fake Loss: 103.2601, D Real Loss: 103.8624, Wasserstein Loss: -103.2315, Content Loss: 0.0002, PSNR: 38.29 SSIM: 0.95
+===> Epoch [46 / 50]: Batch [840 / 1058]: Gradient Penalty: 0.0323, D Fake Loss: 103.1142, D Real Loss: 103.7170, Wasserstein Loss: -103.0835, Content Loss: 0.0002, PSNR: 38.30 SSIM: 0.95
+===> Epoch [46 / 50]: Batch [945 / 1058]: Gradient Penalty: 0.0321, D Fake Loss: 103.1311, D Real Loss: 103.7324, Wasserstein Loss: -103.1047, Content Loss: 0.0002, PSNR: 38.33 SSIM: 0.95
+===> Epoch [46 / 50]: Batch [1050 / 1058]: Gradient Penalty: 0.0322, D Fake Loss: 103.1880, D Real Loss: 103.7905, Wasserstein Loss: -103.1637, Content Loss: 0.0002, PSNR: 38.30 SSIM: 0.95
+Epoch [46 / 50]: Gradient Penalty: 0.0323, D Fake Loss: 103.1823, D Real Loss: 103.7846, Wasserstein Loss: -103.1558, Content Loss: 0.0002, PSNR: 38.30 SSIM: 0.95
+Epoch [47 / 50]
+===> Epoch [47 / 50]: Batch [105 / 1058]: Gradient Penalty: 0.0333, D Fake Loss: 102.6433, D Real Loss: 103.2407, Wasserstein Loss: -102.6440, Content Loss: 0.0002, PSNR: 38.29 SSIM: 0.95
+===> Epoch [47 / 50]: Batch [210 / 1058]: Gradient Penalty: 0.0336, D Fake Loss: 103.2106, D Real Loss: 103.8129, Wasserstein Loss: -103.1938, Content Loss: 0.0002, PSNR: 38.30 SSIM: 0.95
+===> Epoch [47 / 50]: Batch [315 / 1058]: Gradient Penalty: 0.0333, D Fake Loss: 103.0460, D Real Loss: 103.6466, Wasserstein Loss: -103.0304, Content Loss: 0.0002, PSNR: 38.35 SSIM: 0.95
+===> Epoch [47 / 50]: Batch [420 / 1058]: Gradient Penalty: 0.0330, D Fake Loss: 103.4320, D Real Loss: 104.0325, Wasserstein Loss: -103.4239, Content Loss: 0.0002, PSNR: 38.35 SSIM: 0.95
+===> Epoch [47 / 50]: Batch [525 / 1058]: Gradient Penalty: 0.0319, D Fake Loss: 103.5563, D Real Loss: 104.1530, Wasserstein Loss: -103.5364, Content Loss: 0.0002, PSNR: 38.39 SSIM: 0.95
+===> Epoch [47 / 50]: Batch [630 / 1058]: Gradient Penalty: 0.0322, D Fake Loss: 103.2971, D Real Loss: 103.8944, Wasserstein Loss: -103.2667, Content Loss: 0.0002, PSNR: 38.35 SSIM: 0.95
+===> Epoch [47 / 50]: Batch [735 / 1058]: Gradient Penalty: 0.0323, D Fake Loss: 103.3229, D Real Loss: 103.9226, Wasserstein Loss: -103.2965, Content Loss: 0.0002, PSNR: 38.34 SSIM: 0.95
+===> Epoch [47 / 50]: Batch [840 / 1058]: Gradient Penalty: 0.0323, D Fake Loss: 103.4662, D Real Loss: 104.0656, Wasserstein Loss: -103.4460, Content Loss: 0.0002, PSNR: 38.37 SSIM: 0.95
+===> Epoch [47 / 50]: Batch [945 / 1058]: Gradient Penalty: 0.0324, D Fake Loss: 103.5538, D Real Loss: 104.1548, Wasserstein Loss: -103.5279, Content Loss: 0.0002, PSNR: 38.35 SSIM: 0.95
+===> Epoch [47 / 50]: Batch [1050 / 1058]: Gradient Penalty: 0.0327, D Fake Loss: 103.4478, D Real Loss: 104.0483, Wasserstein Loss: -103.4282, Content Loss: 0.0002, PSNR: 38.34 SSIM: 0.95
+Epoch [47 / 50]: Gradient Penalty: 0.0327, D Fake Loss: 103.4543, D Real Loss: 104.0549, Wasserstein Loss: -103.4346, Content Loss: 0.0002, PSNR: 38.34 SSIM: 0.95
+Epoch [48 / 50]
+===> Epoch [48 / 50]: Batch [105 / 1058]: Gradient Penalty: 0.0309, D Fake Loss: 101.7278, D Real Loss: 102.3203, Wasserstein Loss: -101.6668, Content Loss: 0.0002, PSNR: 38.44 SSIM: 0.95
+===> Epoch [48 / 50]: Batch [210 / 1058]: Gradient Penalty: 0.0320, D Fake Loss: 102.5999, D Real Loss: 103.2010, Wasserstein Loss: -102.5517, Content Loss: 0.0002, PSNR: 38.41 SSIM: 0.95
+===> Epoch [48 / 50]: Batch [315 / 1058]: Gradient Penalty: 0.0322, D Fake Loss: 103.0202, D Real Loss: 103.6286, Wasserstein Loss: -102.9940, Content Loss: 0.0002, PSNR: 38.41 SSIM: 0.95
+===> Epoch [48 / 50]: Batch [420 / 1058]: Gradient Penalty: 0.0324, D Fake Loss: 102.8506, D Real Loss: 103.4584, Wasserstein Loss: -102.8236, Content Loss: 0.0002, PSNR: 38.37 SSIM: 0.95
+===> Epoch [48 / 50]: Batch [525 / 1058]: Gradient Penalty: 0.0324, D Fake Loss: 102.8271, D Real Loss: 103.4352, Wasserstein Loss: -102.8135, Content Loss: 0.0002, PSNR: 38.37 SSIM: 0.95
+===> Epoch [48 / 50]: Batch [630 / 1058]: Gradient Penalty: 0.0324, D Fake Loss: 102.9232, D Real Loss: 103.5282, Wasserstein Loss: -102.8927, Content Loss: 0.0002, PSNR: 38.38 SSIM: 0.95
+===> Epoch [48 / 50]: Batch [735 / 1058]: Gradient Penalty: 0.0322, D Fake Loss: 102.7885, D Real Loss: 103.3910, Wasserstein Loss: -102.7582, Content Loss: 0.0002, PSNR: 38.38 SSIM: 0.95
+===> Epoch [48 / 50]: Batch [840 / 1058]: Gradient Penalty: 0.0321, D Fake Loss: 102.7103, D Real Loss: 103.3119, Wasserstein Loss: -102.6856, Content Loss: 0.0002, PSNR: 38.38 SSIM: 0.95
+===> Epoch [48 / 50]: Batch [945 / 1058]: Gradient Penalty: 0.0323, D Fake Loss: 102.7262, D Real Loss: 103.3254, Wasserstein Loss: -102.6993, Content Loss: 0.0002, PSNR: 38.39 SSIM: 0.95
+===> Epoch [48 / 50]: Batch [1050 / 1058]: Gradient Penalty: 0.0320, D Fake Loss: 102.7418, D Real Loss: 103.3400, Wasserstein Loss: -102.7186, Content Loss: 0.0002, PSNR: 38.41 SSIM: 0.95
+Epoch [48 / 50]: Gradient Penalty: 0.0320, D Fake Loss: 102.7452, D Real Loss: 103.3432, Wasserstein Loss: -102.7211, Content Loss: 0.0002, PSNR: 38.41 SSIM: 0.95
+Epoch [49 / 50]
+===> Epoch [49 / 50]: Batch [105 / 1058]: Gradient Penalty: 0.0325, D Fake Loss: 103.8272, D Real Loss: 104.4429, Wasserstein Loss: -103.7844, Content Loss: 0.0002, PSNR: 38.50 SSIM: 0.95
+===> Epoch [49 / 50]: Batch [210 / 1058]: Gradient Penalty: 0.0342, D Fake Loss: 102.4130, D Real Loss: 103.0370, Wasserstein Loss: -102.3954, Content Loss: 0.0002, PSNR: 38.37 SSIM: 0.95
+===> Epoch [49 / 50]: Batch [315 / 1058]: Gradient Penalty: 0.0346, D Fake Loss: 102.6663, D Real Loss: 103.2902, Wasserstein Loss: -102.6530, Content Loss: 0.0002, PSNR: 38.34 SSIM: 0.95
+===> Epoch [49 / 50]: Batch [420 / 1058]: Gradient Penalty: 0.0334, D Fake Loss: 102.8327, D Real Loss: 103.4457, Wasserstein Loss: -102.8115, Content Loss: 0.0002, PSNR: 38.37 SSIM: 0.95
+===> Epoch [49 / 50]: Batch [525 / 1058]: Gradient Penalty: 0.0330, D Fake Loss: 102.7936, D Real Loss: 103.4030, Wasserstein Loss: -102.7764, Content Loss: 0.0002, PSNR: 38.38 SSIM: 0.95
+===> Epoch [49 / 50]: Batch [630 / 1058]: Gradient Penalty: 0.0328, D Fake Loss: 102.6059, D Real Loss: 103.2108, Wasserstein Loss: -102.5849, Content Loss: 0.0002, PSNR: 38.39 SSIM: 0.95
+===> Epoch [49 / 50]: Batch [735 / 1058]: Gradient Penalty: 0.0324, D Fake Loss: 102.3995, D Real Loss: 103.0026, Wasserstein Loss: -102.3749, Content Loss: 0.0002, PSNR: 38.38 SSIM: 0.95
+===> Epoch [49 / 50]: Batch [840 / 1058]: Gradient Penalty: 0.0327, D Fake Loss: 102.4077, D Real Loss: 103.0108, Wasserstein Loss: -102.3878, Content Loss: 0.0002, PSNR: 38.37 SSIM: 0.95
+===> Epoch [49 / 50]: Batch [945 / 1058]: Gradient Penalty: 0.0327, D Fake Loss: 102.4114, D Real Loss: 103.0139, Wasserstein Loss: -102.3886, Content Loss: 0.0002, PSNR: 38.36 SSIM: 0.95
+===> Epoch [49 / 50]: Batch [1050 / 1058]: Gradient Penalty: 0.0326, D Fake Loss: 102.4154, D Real Loss: 103.0175, Wasserstein Loss: -102.3882, Content Loss: 0.0002, PSNR: 38.35 SSIM: 0.95
+Epoch [49 / 50]: Gradient Penalty: 0.0325, D Fake Loss: 102.3821, D Real Loss: 102.9841, Wasserstein Loss: -102.3554, Content Loss: 0.0002, PSNR: 38.35 SSIM: 0.95
+Epoch [50 / 50]
+===> Epoch [50 / 50]: Batch [105 / 1058]: Gradient Penalty: 0.0310, D Fake Loss: 101.1840, D Real Loss: 101.7672, Wasserstein Loss: -101.2176, Content Loss: 0.0002, PSNR: 38.57 SSIM: 0.95
+===> Epoch [50 / 50]: Batch [210 / 1058]: Gradient Penalty: 0.0308, D Fake Loss: 101.8582, D Real Loss: 102.4487, Wasserstein Loss: -101.8687, Content Loss: 0.0002, PSNR: 38.45 SSIM: 0.95
+===> Epoch [50 / 50]: Batch [315 / 1058]: Gradient Penalty: 0.0318, D Fake Loss: 101.8168, D Real Loss: 102.4196, Wasserstein Loss: -101.8223, Content Loss: 0.0002, PSNR: 38.40 SSIM: 0.95
+===> Epoch [50 / 50]: Batch [420 / 1058]: Gradient Penalty: 0.0322, D Fake Loss: 102.1902, D Real Loss: 102.7981, Wasserstein Loss: -102.1723, Content Loss: 0.0002, PSNR: 38.39 SSIM: 0.95
+===> Epoch [50 / 50]: Batch [525 / 1058]: Gradient Penalty: 0.0328, D Fake Loss: 102.0330, D Real Loss: 102.6384, Wasserstein Loss: -102.0164, Content Loss: 0.0002, PSNR: 38.35 SSIM: 0.95
+===> Epoch [50 / 50]: Batch [630 / 1058]: Gradient Penalty: 0.0327, D Fake Loss: 101.9707, D Real Loss: 102.5767, Wasserstein Loss: -101.9508, Content Loss: 0.0002, PSNR: 38.36 SSIM: 0.95
+===> Epoch [50 / 50]: Batch [735 / 1058]: Gradient Penalty: 0.0325, D Fake Loss: 101.9439, D Real Loss: 102.5488, Wasserstein Loss: -101.9298, Content Loss: 0.0002, PSNR: 38.35 SSIM: 0.95
+===> Epoch [50 / 50]: Batch [840 / 1058]: Gradient Penalty: 0.0323, D Fake Loss: 102.1763, D Real Loss: 102.7794, Wasserstein Loss: -102.1628, Content Loss: 0.0002, PSNR: 38.37 SSIM: 0.95
+===> Epoch [50 / 50]: Batch [945 / 1058]: Gradient Penalty: 0.0321, D Fake Loss: 102.1740, D Real Loss: 102.7762, Wasserstein Loss: -102.1612, Content Loss: 0.0002, PSNR: 38.38 SSIM: 0.95
+===> Epoch [50 / 50]: Batch [1050 / 1058]: Gradient Penalty: 0.0322, D Fake Loss: 102.1163, D Real Loss: 102.7195, Wasserstein Loss: -102.0953, Content Loss: 0.0002, PSNR: 38.36 SSIM: 0.95
+Epoch [50 / 50]: Gradient Penalty: 0.0323, D Fake Loss: 102.1093, D Real Loss: 102.7126, Wasserstein Loss: -102.0894, Content Loss: 0.0002, PSNR: 38.36 SSIM: 0.95

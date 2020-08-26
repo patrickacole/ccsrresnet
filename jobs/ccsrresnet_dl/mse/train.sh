@@ -31,4 +31,4 @@ cd ~/Projects/freq-sr/
 echo "Running python script now"
 # python train_ccsrresnet.py --data /data/pacole2/DeepLesionPreprocessed/miniStudies/ --dataset DeepLesion --upscale 1 --content_loss mse --checkpointdir checkpoints/ccsrresnet_dl/mse/ --checksample --wlmbda 1e-3 --batch 32 --load
 ## retrain for slightly different input data
-python train_ccsrresnet.py --data /data/pacole2/DeepLesionPreprocessed/miniStudies/ --dataset DeepLesion --upscale 1 --content_loss mse --checkpointdir checkpoints/ccsrresnet_dl/mse/ --checksample --wlmbda 1e-3 --batch 32 --epochs 50 --start_decay 35 --load --retrain
+python train_ccsrresnet.py --data /data/pacole2/DeepLesionPreprocessed/miniStudies/ --dataset DeepLesion --upscale 1 --content_loss mse --checkpointdir checkpoints/ccsrresnet_dl/mse/ --checksample --wlmbda 1e-3 --batch 32 --epochs 50 --start_decay 35 --load # --retrain

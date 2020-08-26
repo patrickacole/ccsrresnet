@@ -125,13 +125,16 @@ def vgg19_bn(pretrained=False, progress=True, **kwargs):
 ## Perceptual loss
 #########################################################################
 class PerceptualLoss():
-    def __init__(self, extract_feats=['conv5_4']):
+    def __init__(self, extract_feats=['relu2_2']):
         self.extract_feats = extract_feats
         self.vgg = vgg19(pretrained=True).cuda()
+        for param in self.vgg.parameters():
+            param.requires_grad = False
+        self.vgg.eval()
         self.mse = nn.MSELoss()
 
-        self.mean = torch.tensor([0.485, 0.456, 0.406]).view(1,3,1,1)
-        self.std = torch.tensor([0.229, 0.224, 0.225]).view(1,3,1,1)
+        self.mean = torch.tensor([0.485, 0.456, 0.406]).view(1,3,1,1).cuda()
+        self.std = torch.tensor([0.229, 0.224, 0.225]).view(1,3,1,1).cuda()
 
     def __call__(self, learned, real):
         if learned.size(1) == 1:
@@ -150,7 +153,7 @@ class PerceptualLoss():
 
         loss = 0.0
         for i in range(len(real_feats)):
-            loss += self.mse(learned_feats[i], real_feats[i].detach())
+            loss += self.mse(learned_feats[i], real_feats[i])
         return loss
 
 if __name__=="__main__":
