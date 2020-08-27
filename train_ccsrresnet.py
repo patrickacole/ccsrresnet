@@ -48,6 +48,7 @@ def args_parse():
     """
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('--data', default="../datasets/xray_images/", help="Path to where data is stored")
+    parser.add_argument('--tdata', default="../datasets/xray_images/", help="Path to where test data is stored")
     parser.add_argument('--dataset', default="xray_images", help="Type of dataset can be xray_images, CXR8, or DeepLesion")
     parser.add_argument('--upscale', default=2, type=int, help="Amount to upscale by")
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
@@ -112,7 +113,7 @@ def calc_ssim(learned, real, data_range=1.0):
         ssim += compare_ssim(real[i,0,:,:], learned[i,0,:,:], data_range=data_range)
     return (ssim / learned.shape[0])
 
-def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
+def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, tdataloader, start_epoch):
     # set optimizers
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     # optimizerSR = optim.Adam(modelSR.parameters(), lr=args.lr, betas=(0.9, 0.999))
@@ -261,6 +262,37 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
               "PSNR: {:.2f}".format(avg_psnr / len(dataloader)),
               "SSIM: {:.2f}".format(avg_ssim / len(dataloader)))
 
+        # test data
+        if (e + 1) % 5 == 0:
+            ## keep track of the average psnr
+            avg_psnr = 0.0
+            avg_ssim = 0.0
+
+            for i, (imageLR, imageHR) in enumerate(tdataloader):
+                imageLR = imageLR.to(device)
+                imageHR = imageHR.to(device)
+
+                ##################################
+                # test super resolution network
+                ##################################
+
+                ## generate fake data
+                with torch.no_grad():
+                    fake_data = modelSR(imageLR)
+
+                learned_psnr = calc_psnr(fake_data, imageHR)
+                avg_psnr += learned_psnr.mean().item()
+                learned_ssim = calc_ssim(fake_data, imageHR)
+                avg_ssim += learned_ssim.mean().item()
+
+                ## remove variables to release some memory on gpu
+                del imageLR, imageHR
+
+            # print final results of the training run
+            print("Epoch [{} / {}]:".format(e + 1, args.epochs),
+                "Test PSNR: {:.2f}".format(avg_psnr / len(tdataloader)),
+                "Test SSIM: {:.2f}".format(avg_ssim / len(tdataloader)))
+
         # check to save sample, only do every 50 epochs
         if args.checksample and ((e + 1) % 50 == 0 or e == 0):
             with torch.no_grad():
@@ -301,6 +333,7 @@ if __name__=="__main__":
 
     print("Using the following hyperparemters:")
     print("Data:                 " + args.data)
+    print("Test data:            " + args.tdata)
     print("Dataset:              " + args.dataset)
     print("Upscale:              " + str(args.upscale))
     print("Learning rate:        " + str(args.lr))
@@ -332,12 +365,15 @@ if __name__=="__main__":
             test_names = [dataset.at(0).lstrip(args.data)]
     elif args.dataset == 'DeepLesion':
         dataset = DeepLesionDataset(args.data, preprocessed=True)
+        tdataset = DeepLesionDataset(args.tdata, preprocessed=True)
         if args.checksample:
             test_images = dataset[0][0].unsqueeze(0)
             test_names = ['_'.join(dataset.at(0).lstrip(args.data).split('/'))]
 
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
+    tdataloader = DataLoader(tdataset, batch_size=args.batch,
+                            shuffle=False, num_workers=8)
 
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
 
@@ -380,4 +416,4 @@ if __name__=="__main__":
     if args.retrain:
         start_epoch = 0
 
-    train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch)
+    train(modelSR, modelD, optimizerSR, optimizerD, dataloader, tdataloader, start_epoch)
