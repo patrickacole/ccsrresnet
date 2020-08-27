@@ -17,14 +17,14 @@ from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 from skimage.metrics import structural_similarity as compare_ssim
 
 # custom imports
-from utils.crop_dataset import *
+from utils.dataset import *
+from utils.crop_dataset import DeepLesionDataset as CropDeepLesionDataset
+from utils.collate_func import *
 from utils.checkpoints import *
-from utils.loss import PerceptualLoss
-from model.WGAN_VGG import *
+from model.SRResNet import *
 
 
 # global variables
-M, N = (256, 256)
 device = None
 args = None
 test_images = None
@@ -49,19 +49,21 @@ def args_parse():
     """
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('--data', default="../datasets/xray_images/", help="Path to where data is stored")
-    parser.add_argument('--dataset', default="DeepLesion", help="Type of dataset can be xray_images, CXR8, or DeepLesion")
-    parser.add_argument('--upscale', default=1, type=int, help="Amount to upscale by")
-    parser.add_argument('--lr', default=1e-5, type=float, help="Learning rate")
-    parser.add_argument('--epochs', default=100, type=int, help="Number of epochs to train")
+    parser.add_argument('--tdata', default="../datasets/xray_images/", help="Path to where test data is stored")
+    parser.add_argument('--dataset', default="xray_images", help="Type of dataset can be xray_images, CXR8, or DeepLesion")
+    parser.add_argument('--upscale', default=2, type=int, help="Amount to upscale by")
+    parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
+    parser.add_argument('--epochs', default=300, type=int, help="Number of epochs to train")
     parser.add_argument('--num_epoch_prints', default=10, type=int, help="Number of times to print each epoch")
-    parser.add_argument('--start_decay', default=99, type=int, help="Epoch to start decaying the learning rate")
+    parser.add_argument('--start_decay', default=250, type=int, help="Epoch to start decaying the learning rate")
     parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
-    parser.add_argument('--content_loss', default="vgg", help="Content loss can currently be wl2, mse, mix, abs, or None")
-    parser.add_argument('--clmbda', default=0.1, type=float, help="Weight of content loss")
-    parser.add_argument('--wlmbda', default=1.0, type=float, help="Weight of wasserstein loss")
+    parser.add_argument('--content_loss', default="mse", help="Content loss can currently be wl2, mse, mix, abs, or None")
+    parser.add_argument('--clmbda', default=1.0, type=float, help="Weight of content loss")
+    parser.add_argument('--wlmbda', default=1e-3, type=float, help="Weight of wasserstein loss")
     parser.add_argument('--checksample', default=False, action='store_true', help="Whether to save an image intermediately throughout training")
-    parser.add_argument('--checkpointdir', default="checkpoints/wgan_vgg/", help="Path to checkpoint directory")
+    parser.add_argument('--checkpointdir', default="checkpoints/srresnet2/", help="Path to checkpoint directory")
     parser.add_argument('--load', default=False, action='store_true', help="Whether to load from a previous checkpoint file")
+    parser.add_argument('--retrain', default=False, action='store_true', help="Whether to retrain model, will start at epoch 0 and use weights from previous session")
     parser.add_argument('--prefix', default="last", help="Prefix for checkpoint file")
     return parser.parse_args()
 
@@ -90,12 +92,6 @@ def calc_gradient_penalty(modelD, real_data, fake_data, lmbda=10):
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * lmbda
     return gradient_penalty
 
-# def psnr(learned, real):
-#     learned = torch.clamp(learned, min=0, max=1)
-#     mse = ((learned - real) ** 2).view(real.size(0), -1).mean(dim=-1)
-#     psnr = 10.0 * torch.log10(1.0 / mse)
-#     return psnr
-
 def calc_psnr(learned, real, data_range=1.0):
     learned = learned.data.cpu().numpy().astype(np.float32)
     real = real.data.cpu().numpy().astype(np.float32)
@@ -112,7 +108,7 @@ def calc_ssim(learned, real, data_range=1.0):
         ssim += compare_ssim(real[i,0,:,:], learned[i,0,:,:], data_range=data_range)
     return (ssim / learned.shape[0])
 
-def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
+def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, tdataloader, start_epoch):
     # set optimizers
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     # optimizerSR = optim.Adam(modelSR.parameters(), lr=args.lr, betas=(0.9, 0.999))
@@ -130,13 +126,11 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
         criterion = nn.MSELoss()
     elif args.content_loss == 'abs':
         criterion = nn.L1Loss()
-    elif args.content_loss == 'vgg':
-        criterion = PerceptualLoss()
     elif args.content_loss != 'None':
         raise NotImplementedError('The loss provided has not been implemented yet')
 
     # calculate when to print each epoch
-    print_idx = 16 # len(dataloader) // args.num_epoch_prints
+    print_idx = len(dataloader) // args.num_epoch_prints
 
     for e in range(start_epoch, args.epochs):
         print("Epoch [{} / {}]".format(e + 1, args.epochs))
@@ -174,7 +168,7 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
 
             ## fake data
             with torch.no_grad():
-                fake_data = torch.clamp(modelSR(imageLR), 0., 1.)
+                fake_data = modelSR(imageLR)
             fake_label = modelD(fake_data)
             fake_d_loss = fake_label.mean()
             avg_fake_d_loss += fake_d_loss.item()
@@ -200,45 +194,42 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
             ##################################
             # train super resolution network
             ##################################
-            if (i + 1) % 1 == 0:
-                for param in modelD.parameters():
-                    param.requires_grad_(False)
+            for param in modelD.parameters():
+                param.requires_grad_(False)
 
-                optimizerSR.zero_grad()
+            optimizerSR.zero_grad()
 
-                ## generate fake data
-                fake_data = torch.clamp(modelSR(imageLR), 0., 1.)
-                if e < 5:
-                    print(fake_data.max().item(), fake_data.min().item())
+            ## generate fake data
+            fake_data = modelSR(imageLR)
 
-                ## calculate wasserstein loss
-                fake_label = modelD(fake_data)
-                wassertein_loss = -fake_label.mean()
-                avg_wasserstein_loss += wassertein_loss.item()
+            ## calculate wasserstein loss
+            fake_label = modelD(fake_data)
+            wassertein_loss = -fake_label.mean()
+            avg_wasserstein_loss += wassertein_loss.item()
 
-                ## calculate content loss
-                content_loss = None
-                if args.content_loss == 'mse' or args.content_loss == 'abs' or args.content_loss == 'vgg':
-                    content_loss = criterion(fake_data, imageHR)
-                elif args.content_loss == 'None':
-                    content_loss = torch.tensor(0.0).to(device)
-                avg_content_loss += content_loss.item()
+            ## calculate content loss
+            content_loss = None
+            if args.content_loss == 'mse' or args.content_loss == 'abs':
+                content_loss = criterion(fake_data, imageHR)
+            elif args.content_loss == 'None':
+                content_loss = torch.tensor(0.0).to(device)
+            avg_content_loss += content_loss.item()
 
-                ## calculate gradient
-                sr_loss = args.clmbda * content_loss + args.wlmbda * wassertein_loss
-                sr_loss.backward()
+            ## calculate gradient
+            sr_loss = args.clmbda * content_loss + args.wlmbda * wassertein_loss
+            sr_loss.backward()
 
-                ## update parameters
-                optimizerSR.step()
+            ## update parameters
+            optimizerSR.step()
 
-                ## calculate psnr
-                learned_psnr = calc_psnr(fake_data, imageHR)
-                avg_psnr += learned_psnr.mean().item()
-                learned_ssim = calc_ssim(fake_data, imageHR)
-                avg_ssim += learned_ssim.mean().item()
+            ## calculate psnr
+            learned_psnr = calc_psnr(fake_data, imageHR)
+            avg_psnr += learned_psnr.mean().item()
+            learned_ssim = calc_ssim(fake_data, imageHR)
+            avg_ssim += learned_ssim.mean().item()
 
-                ## remove variables to release some memory on gpu
-                del sr_loss, content_loss, wassertein_loss, fake_data
+            ## remove variables to release some memory on gpu
+            del sr_loss, content_loss, wassertein_loss, fake_data
             del imageLR, imageHR
 
             ## print status of training
@@ -247,10 +238,10 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
                       "Gradient Penalty: {:.4f},".format(avg_gradient_penalty / (i + 1)),
                       "D Fake Loss: {:.4f},".format(avg_fake_d_loss / (i + 1)),
                       "D Real Loss: {:.4f},".format(avg_real_d_loss / (i + 1)),
-                      "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / ((i + 1) / 1)),
-                      "Content Loss: {:.4f},".format(avg_content_loss / ((i + 1) / 1)),
-                      "PSNR: {:.2f}".format(avg_psnr / ((i + 1) / 1)),
-                      "SSIM: {:.2f}".format(avg_ssim / ((i + 1) / 1)))
+                      "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / (i + 1)),
+                      "Content Loss: {:.4f},".format(avg_content_loss / (i + 1)),
+                      "PSNR: {:.2f}".format(avg_psnr / (i + 1)),
+                      "SSIM: {:.2f}".format(avg_ssim / (i + 1)))
 
         # take a step with the lr schedulers
         lrschedulerSR.step()
@@ -261,15 +252,46 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
               "Gradient Penalty: {:.4f},".format(avg_gradient_penalty / len(dataloader)),
               "D Fake Loss: {:.4f},".format(avg_fake_d_loss / len(dataloader)),
               "D Real Loss: {:.4f},".format(avg_real_d_loss / len(dataloader)),
-              "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / (len(dataloader) / 1)),
-              "Content Loss: {:.4f},".format(avg_content_loss / (len(dataloader) / 1)),
-              "PSNR: {:.2f}".format(avg_psnr / (len(dataloader) / 1)),
-              "SSIM: {:.2f}".format(avg_ssim / (len(dataloader) / 1)))
+              "Wasserstein Loss: {:.4f},".format(avg_wasserstein_loss / len(dataloader)),
+              "Content Loss: {:.4f},".format(avg_content_loss / len(dataloader)),
+              "PSNR: {:.2f}".format(avg_psnr / len(dataloader)),
+              "SSIM: {:.2f}".format(avg_ssim / len(dataloader)))
+
+        # test data
+        if (e + 1) % 5 == 0:
+            ## keep track of the average psnr
+            avg_psnr = 0.0
+            avg_ssim = 0.0
+
+            for i, (imageLR, imageHR) in enumerate(tdataloader):
+                imageLR = imageLR.to(device)
+                imageHR = imageHR.to(device)
+
+                ##################################
+                # test super resolution network
+                ##################################
+
+                ## generate fake data
+                with torch.no_grad():
+                    fake_data = modelSR(imageLR)
+
+                learned_psnr = calc_psnr(fake_data, imageHR)
+                avg_psnr += learned_psnr.mean().item()
+                learned_ssim = calc_ssim(fake_data, imageHR)
+                avg_ssim += learned_ssim.mean().item()
+
+                ## remove variables to release some memory on gpu
+                del imageLR, imageHR
+
+            # print final results of the training run
+            print("Epoch [{} / {}]:".format(e + 1, args.epochs),
+                "Test PSNR: {:.2f}".format(avg_psnr / len(tdataloader)),
+                "Test SSIM: {:.2f}".format(avg_ssim / len(tdataloader)))
 
         # check to save sample, only do every 50 epochs
-        if args.checksample and ((e + 1) % 5 == 0 or e == 0):
+        if args.checksample and ((e + 1) % 50 == 0 or e == 0):
             with torch.no_grad():
-                learned = torch.clamp(modelSR(test_images.to(device)), 0., 1.)
+                learned = modelSR(test_images.to(device))
 
             # convert to numpy array
             learned = learned.cpu().data.numpy()
@@ -301,11 +323,12 @@ def train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch):
 
 
 if __name__=="__main__":
-    print("Beginning training for WGAN-VGG model...")
+    print("Beginning training for SRResNet model...")
     args = args_parse()
 
     print("Using the following hyperparemters:")
     print("Data:                 " + args.data)
+    print("Test data:            " + args.tdata)
     print("Dataset:              " + args.dataset)
     print("Upscale:              " + str(args.upscale))
     print("Learning rate:        " + str(args.lr))
@@ -319,6 +342,7 @@ if __name__=="__main__":
     print("Check Sample:         " + str(args.checksample))
     print("Checkpoint directory: " + args.checkpointdir)
     print("Load:                 " + str(args.load))
+    print("Retrain:              " + str(args.retrain))
     print("Prefix:               " + args.prefix)
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
@@ -335,26 +359,33 @@ if __name__=="__main__":
             test_images = dataset[0][0].unsqueeze(0)
             test_names = [dataset.at(0).lstrip(args.data)]
     elif args.dataset == 'DeepLesion':
-        dataset = DeepLesionDataset(args.data, crop_size=(64, 64))
+        dataset = CropDeepLesionDataset(args.data, crop_size=None)
+        tdataset = CropDeepLesionDataset(args.tdata, crop_size=None)
         if args.checksample:
             test_images = dataset[0][0].unsqueeze(0)
             test_names = ['_'.join(dataset.at(0).lstrip(args.data).split('/'))]
 
     dataloader = DataLoader(dataset, batch_size=args.batch,
-                            shuffle=True, num_workers=8)
+                            shuffle=True, collate_fn=collate_func, num_workers=8)
+    # force the batch size of the test data to be 8 to run on any gpu
+    tdataloader = DataLoader(tdataset, batch_size=8,
+                            shuffle=False, num_workers=8)
 
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
 
-    modelSR = WGAN_VGG()
-    modelD = Discriminator()
+    modelSR = SRResNet(nc=1, upscale=args.upscale)
+    if args.dataset == 'CXR8' or args.dataset == 'DeepLesion':
+        modelD  = Discriminator(nc=1, nlayers=5)
+    else:
+        modelD = Discriminator(nc=1)
 
-    optimizerSR = optim.Adam(modelSR.parameters(), lr=args.lr, betas=(0.5, 0.9))
-    optimizerD  = optim.Adam(modelD.parameters(), lr=args.lr, betas=(0.5, 0.9))
+    optimizerSR = optim.Adam(modelSR.parameters(), lr=args.lr, betas=(0.9, 0.999))
+    optimizerD  = optim.Adam(modelD.parameters(), lr=args.lr, betas=(0.9, 0.999))
     start_epoch = 0
 
     if args.load and os.path.exists(os.path.join(args.checkpointdir, 'super_resolution', args.prefix + '.pth')):
         load_checkpoint(os.path.join(args.checkpointdir, 'super_resolution'),
-                        args.prefix, modelSR, optimizer=optimizerSR)
+                        args.prefix, modelSR, optimizer=optimizerSR if not args.retrain else None)
 
         for state in optimizerSR.state.values():
             for k, v in state.items():
@@ -362,7 +393,7 @@ if __name__=="__main__":
                     state[k] = v.to(device)
 
         start_epoch = load_checkpoint(os.path.join(args.checkpointdir, "discriminator"),
-                        args.prefix, modelD, optimizer=optimizerD)['epoch']
+                        args.prefix, modelD, optimizer=optimizerD if not args.retrain else None)['epoch']
 
         for state in optimizerD.state.values():
             for k, v in state.items():
@@ -378,4 +409,7 @@ if __name__=="__main__":
     modelSR.to(device)
     modelD.to(device)
 
-    train(modelSR, modelD, optimizerSR, optimizerD, dataloader, start_epoch)
+    if args.retrain:
+        start_epoch = 0
+
+    train(modelSR, modelD, optimizerSR, optimizerD, dataloader, tdataloader, start_epoch)

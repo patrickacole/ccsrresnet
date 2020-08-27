@@ -8,9 +8,6 @@ from torch.utils.data import Dataset
 from torchvision.transforms import ToTensor
 from skimage.transform import radon, iradon
 
-# this is left over from natural images
-# from .image_utils import *
-
 
 class DeepLesionDataset(Dataset):
     def __init__(self, root, crop_size=None):
