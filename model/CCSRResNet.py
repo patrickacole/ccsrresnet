@@ -5,7 +5,7 @@ import math
 from .CoordConv import *
 
 """
-Code in this file is taken from https://github.com/twtygqyy/pytorch-SRResNet
+Code in this file is modified from https://github.com/twtygqyy/pytorch-SRResNet
 """
 
 class Residual_Block(nn.Module):

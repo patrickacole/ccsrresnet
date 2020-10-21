@@ -64,32 +64,6 @@ class CXR8Dataset(Dataset):
         return os.path.join(self.root, self.samples[idx])
 
 
-class NoisyXrayDataset(Dataset):
-    def __init__(self, root, train=True):
-        # root should be the path to xray_images
-        if not os.path.exists(root):
-            raise OSError("{}, path does not exist..".format(root))
-
-        self.root = root
-        self.dir = ['test_images_64x64', 'train_images_64x64'][int(train)]
-        self.samples = [sample for sample in os.listdir(os.path.join(root, self.dir)) if '.png' in sample]
-        self.totensor = ToTensor()
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, idx):
-        pathLR = self.at(idx)
-        pathHR = pathLR.replace('64x64', '128x128')
-        imageLR = Image.open(pathLR).convert('L')
-        imageHR = Image.open(pathHR).convert('L')
-
-        return (self.totensor(imageLR), self.totensor(imageHR))
-
-    def at(self, idx):
-        return os.path.join(self.root, self.dir, self.samples[idx])
-
-
 class DeepLesionDataset(Dataset):
     def __init__(self, root, image_shape=(256, 256), add_noise=True, preprocessed=False, crop_size=None):
         if not os.path.exists(root):
@@ -198,20 +172,6 @@ if __name__=="__main__":
         # noise.save('noise.png')
         # normal = Image.fromarray((255 * imageHR).astype(np.uint8))
         # normal.save('normal.png')
-    elif which == 'Noisy':
-        datapath = os.path.expanduser("~/Projects/datasets/xray_images/")
-        dataset = NoisyXrayDataset(datapath, train=False)
-        print(len(dataset))
-        print(dataset.at(0))
-
-        imageLR, imageHR = dataset[0]
-        print(imageHR.shape)
-        imageLR = np.asarray(imageLR[0]) #.transpose(1, 2, 0)
-        imageHR = np.asarray(imageHR[0]) #.transpose(1, 2, 0)
-        print(imageHR.shape)
-        import matplotlib.pyplot as plt
-        plt.imshow(imageHR, cmap="gray")
-        plt.show()
     elif which == 'DeepLesion':
         # datapath = os.path.expanduser("~/Downloads/DeepLesion2/Images_png/")
         # dataset = DeepLesionDataset(datapath, add_noise=True)

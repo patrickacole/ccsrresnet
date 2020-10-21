@@ -49,7 +49,7 @@ def args_parse():
     parser = ArgumentParser(description="Arguments for training")
     parser.add_argument('--data', default="../datasets/xray_images/", help="Path to where data is stored")
     parser.add_argument('--tdata', default="../datasets/xray_images/", help="Path to where test data is stored")
-    parser.add_argument('--dataset', default="xray_images", help="Type of dataset can be xray_images, CXR8, or DeepLesion")
+    parser.add_argument('--dataset', default="xray_images", help="Type of dataset can be CXR8, or DeepLesion")
     parser.add_argument('--upscale', default=2, type=int, help="Amount to upscale by")
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=300, type=int, help="Number of epochs to train")
@@ -90,12 +90,6 @@ def calc_gradient_penalty(modelD, real_data, fake_data, lmbda=10):
     gradients = gradients.view(gradients.size(0), -1)
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * lmbda
     return gradient_penalty
-
-# def psnr(learned, real):
-#     learned = torch.clamp(learned, min=0, max=1)
-#     mse = ((learned - real) ** 2).view(real.size(0), -1).mean(dim=-1)
-#     psnr = 10.0 * torch.log10(1.0 / mse)
-#     return psnr
 
 def calc_psnr(learned, real, data_range=1.0):
     learned = learned.data.cpu().numpy().astype(np.float32)
@@ -352,12 +346,7 @@ if __name__=="__main__":
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
 
-    if args.dataset == 'xray_images':
-        dataset = NoisyXrayDataset(args.data)
-        if args.checksample:
-            test_images = dataset[0][0].unsqueeze(0)
-            test_names = [dataset.at(0).lstrip(os.path.join(args.data, 'train_images_64x64'))]
-    elif args.dataset == 'CXR8':
+    if args.dataset == 'CXR8':
         # dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, crop_size=(256, 256))
         dataset = CXR8Dataset(args.data, scale_factor=args.upscale, add_noise=True, image_shape=(256, 256))
         if args.checksample:
