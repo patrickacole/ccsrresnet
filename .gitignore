@@ -6,4 +6,6 @@
 *.log
 dataset/Set5
 dataset/Set14
+discriminator/
+output/
 

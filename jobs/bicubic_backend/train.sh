@@ -14,27 +14,24 @@ then
     mkdir /data/pacole2
 fi
 
-if [[ ! -d "/data/pacole2/VOCdevkit" ]]
+if [[ ! -d "/data/pacole2/CXR8/" ]]
 then
     echo "Data is not on gpu storage"
     echo "Copying over data from shared storage"
-    cp /shared/rsaas/pacole2/VOCtrainval_11-May-2012.tar /data/pacole2/
-    cd /data/pacole2/
-    tar -xf VOCtrainval_11-May-2012.tar
-    cd /home/pacole2/
-fi
+    mkdir /data/pacole2/CXR8
 
-cd ~/Projects/freq-sr/dataset/ 
-# Make the symbolic link to the data
-if [[ -L "VOC2012" ]]
-then
-    unlink VOC2012
+    FILESETLIST="images_01.tar.gz images_02.tar.gz"
+    for FILESET in ${FILESETLIST}
+    do
+        echo "Copying over ${FILESET}.."
+        cp /shared/rsaas/pacole2/CXR8/${FILESET} /data/pacole2/CXR8
+        cd /data/pacole2/CXR8/
+        tar -xzf ${FILESET}
+        cd /home/pacole2/
+    done
 fi
-
-ln -s /data/pacole2/VOCdevkit/VOC2012 VOC2012
 
 # Data is ready now run python file
 cd ~/Projects/freq-sr/
 echo "Running python script now"
-python train.py --rgb
-
+python train.py --data /data/pacole2/CXR8/images/

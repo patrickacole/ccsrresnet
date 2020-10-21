@@ -17,7 +17,7 @@ def save_checkpoint(state, isbest, checkpoint):
     filepath = os.path.join(checkpoint, 'last.pth')
     if not os.path.exists(checkpoint):
         print("Checkpoint Directory does not exist! Making directory {}".format(checkpoint))
-        os.mkdir(checkpoint)
+        os.makedirs(checkpoint)
 
     torch.save(state, filepath)
     if isbest:
@@ -42,7 +42,15 @@ def load_checkpoint(checkpointdir, prefix, model, optimizer=None):
     else:
         checkpoint = torch.load(checkpoint, map_location='cpu')
 
-    model.load_state_dict(checkpoint['state_dict'])
+    # if model was trained with nn.DataParallel need to get rid of `module.` in every key
+    state_dict = {}
+    for key in checkpoint['state_dict'].keys():
+        if 'module.' in key:
+            state_dict[key.split('module.')[1]] = checkpoint['state_dict'][key]
+        else:
+            state_dict[key] = checkpoint['state_dict'][key]
+
+    model.load_state_dict(state_dict)
 
     if optimizer:
         optimizer.load_state_dict(checkpoint['optim_dict'])

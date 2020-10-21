@@ -1,0 +1,74 @@
+Wed Aug 26 01:05:18 2020       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 450.36.06    Driver Version: 450.36.06    CUDA Version: 11.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  GeForce GTX TIT...  Off  | 00000000:04:00.0 Off |                  N/A |
+| 19%   35C    P0    68W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   1  GeForce GTX TIT...  Off  | 00000000:05:00.0 Off |                  N/A |
+| 18%   35C    P0    69W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   2  GeForce GTX TIT...  Off  | 00000000:08:00.0 Off |                  N/A |
+| 18%   36C    P0    69W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   3  GeForce GTX TIT...  Off  | 00000000:09:00.0 Off |                  N/A |
+| 18%   38C    P0    68W / 250W |      0MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   4  GeForce GTX TIT...  Off  | 00000000:84:00.0 Off |                  N/A |
+| 42%   78C    P2   105W / 250W |  12144MiB / 12212MiB |      8%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   5  GeForce GTX TIT...  Off  | 00000000:85:00.0 Off |                  N/A |
+| 39%   77C    P2   101W / 250W |  11656MiB / 12212MiB |     13%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   6  GeForce GTX TIT...  Off  | 00000000:88:00.0 Off |                  N/A |
+| 39%   75C    P2   104W / 250W |  11670MiB / 12212MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   7  GeForce GTX TIT...  Off  | 00000000:89:00.0 Off |                  N/A |
+| 51%   76C    P2   117W / 250W |  12202MiB / 12212MiB |     27%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|    4   N/A  N/A     12165      C   ...envs/detectron/bin/python    12141MiB |
+|    5   N/A  N/A     12166      C   ...envs/detectron/bin/python    11653MiB |
+|    6   N/A  N/A     12167      C   ...envs/detectron/bin/python    11667MiB |
+|    7   N/A  N/A     12168      C   ...envs/detectron/bin/python    12199MiB |
++-----------------------------------------------------------------------------+
+Running python script now
+Beginning testing for CCSRResNet model...
+Using the following hyperparemters:
+Data:                 /data/pacole2/DeepLesionTestPreprocessed/miniStudies/
+Batch size:           1
+Batch break:          -1
+Upscale:              1
+Prints:               8
+Metric:               all
+Save directory:       output/ccsrresnet-results/
+Checkpoint directory: checkpoints/ccsrresnet_dl/mse/
+Cuda:                 1
+
+Beginning testing loop...
+===> Batch: [648 / 5187] Average psnr: 28.71 Average ssim: 0.94 Average rmse: 6682.36
+===> Batch: [1296 / 5187] Average psnr: 29.05 Average ssim: 0.94 Average rmse: 13005.13
+===> Batch: [1944 / 5187] Average psnr: 29.24 Average ssim: 0.94 Average rmse: 18989.02
+===> Batch: [2592 / 5187] Average psnr: 29.89 Average ssim: 0.94 Average rmse: 23684.12
+===> Batch: [3240 / 5187] Average psnr: 29.69 Average ssim: 0.94 Average rmse: 30348.10
+===> Batch: [3888 / 5187] Average psnr: 29.95 Average ssim: 0.94 Average rmse: 35410.57
+===> Batch: [4536 / 5187] Average psnr: 30.07 Average ssim: 0.94 Average rmse: 40805.13
+===> Batch: [5184 / 5187] Average psnr: 30.22 Average ssim: 0.93 Average rmse: 45787.50
+Model had an average psnr of 30.22, an average ssim of 0.93, and a sum rmse of 45802.47 on the test dataset

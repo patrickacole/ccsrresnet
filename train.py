@@ -4,6 +4,7 @@ import torchvision
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 
@@ -19,6 +20,7 @@ from model.FreqSR import *
 
 # global variables
 M, N = (256, 256)
+Mx, Nx = (512, 512)
 device = None
 args = None
 
@@ -28,8 +30,7 @@ def args_parse():
     @return args: commandline arguments (Namespace)
     """
     parser = ArgumentParser(description="Arguments for training")
-    parser.add_argument('--data', default="dataset/VOC2012/JPEGImages/", help="Path to where data is stored")
-    parser.add_argument('--rgb', default=False, action="store_true", help="Whether to train the model with rgb (default is grayscale)")
+    parser.add_argument('--data', default="../datasets/CXR8/images/", help="Path to where data is stored")
     parser.add_argument('--lr', default=1e-4, type=float, help="Learning rate")
     parser.add_argument('--epochs', default=200, type=int, help="Number of epochs to train")
     parser.add_argument('--batch', default=32, type=int, help="Batch size to use while training")
@@ -48,14 +49,14 @@ def weightedEuclideanLoss(learned, real, a=1.0, b=1.0):
 
     # construct weighted matrix
     # this matrix puts an emphasis on the corners of the image
-    m = (torch.abs(M / 2 - torch.arange(M)[:,None]) / (M / 2)) ** 2
-    n = (torch.abs(N / 2 - torch.arange(N)[None,:]) / (N / 2)) ** 2
+    m = (torch.abs(Mx / 2 - torch.arange(Mx)[:,None]) / (Mx / 2)) ** 2
+    n = (torch.abs(Nx / 2 - torch.arange(Nx)[None,:]) / (Nx / 2)) ** 2
     w = torch.exp(a * m + b * n).to(device)
 
     # take the 2 norm of the flattened image
     # this is equivalent to taking the frobenius norm of the image matrix
     d = w[None,None,:] * (learned - real)
-    d = d.view(-1, c * M * N)
+    d = d.view(-1, c * Mx * Nx)
     l = 0.5 * torch.norm(d, p=2, dim=1)
 
     # return the mean over the given samples
@@ -64,7 +65,7 @@ def weightedEuclideanLoss(learned, real, a=1.0, b=1.0):
 def L2Loss(learned, real):
     c = learned.size(1)
     diff = learned - real
-    diff = diff.view(-1, c * M * N)
+    diff = diff.view(-1, c * Mx * Nx)
     norm = torch.norm(diff, p=2, dim=1)
     return torch.mean(norm)
 
@@ -74,7 +75,9 @@ def train(model, dataloader, scale_factor=2):
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999))
     criterion = weightedEuclideanLoss
     lrscheduler = optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.2)
-    fht2d = FHT2D((M,N))
+    fht2d = FHT2D((Mx,Nx))
+    w_pad = abs(Mx - M) // 2
+    h_pad = abs(Nx - N) // 2
 
     best_psnr = 0
     for e in range(args.epochs):
@@ -83,8 +86,8 @@ def train(model, dataloader, scale_factor=2):
         bicubic_psnr = 0.0
         total_images = 0
         for i, (imageLR, imageHR) in enumerate(dataloader):
-            imageLR = imageLR.to(device)
-            imageHR = imageHR.to(device)
+            imageLR = F.pad(imageLR.to(device), (w_pad, w_pad, h_pad, h_pad))
+            imageHR = F.pad(imageHR.to(device), (w_pad, w_pad, h_pad, h_pad))
 
             # calculate residual
             imageResidual = imageHR - imageLR
@@ -109,6 +112,10 @@ def train(model, dataloader, scale_factor=2):
             optimizer.step()
 
             learnedHR = fht2d(learnedResidual, inverse=True) + imageLR
+            learnedHR = learnedHR[:,:,w_pad:-w_pad,h_pad:-h_pad]
+            imageLR = imageLR[:,:,w_pad:-w_pad,h_pad:-h_pad]
+            imageHR = imageHR[:,:,w_pad:-w_pad,h_pad:-h_pad]
+
             bicubicHR = imageLR
 
             total_images += imageLR.size(0)
@@ -151,7 +158,6 @@ if __name__=="__main__":
     print("Using the following hyperparemters:")
     print("Data:                 " + args.data)
     print("Image size:           " + str(M) + " x " + str(N))
-    print("RGB:                  " + str(args.rgb))
     print("Learning rate:        " + str(args.lr))
     print("Number of Epochs:     " + str(args.epochs))
     print("Batch size:           " + str(args.batch))
@@ -159,15 +165,13 @@ if __name__=="__main__":
     print("Cuda:                 " + str(torch.cuda.device_count()))
     print("")
 
-    color = ('grayscale', 'rgb')[int(args.rgb)]
-    dataset = VOC2012(args.data, image_shape=(M, N), color=color, upsample='bicubic')
+    dataset = CXR8Dataset(args.data, image_shape=(M, N), color="grayscale", upsample='bicubic')
     dataloader = DataLoader(dataset, batch_size=args.batch,
                             shuffle=True, num_workers=8)
 
     device = torch.device(("cpu","cuda:0")[torch.cuda.is_available()])
 
-    C = (1, 3)[int(args.rgb)]
-    model = FreqSR(shape=(C, M, N))
+    model = FreqSR(shape=(1, Mx, Nx))
     if (torch.cuda.device_count() > 1):
         device_ids = list(range(torch.cuda.device_count()))
         print("GPU devices being used: ", device_ids)
